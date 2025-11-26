@@ -1,19 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box, CircularProgress, Alert } from '@mui/material';
 import API from '../api';
 
-// This component opens a popup form to Create or Edit a document
 function GenericFormDialog({ open, onClose, collectionName, initialData, onSuccess }) {
   const [formData, setFormData] = useState({});
-  const isEditMode = !!initialData?._id; // If it has an ID, we are editing
+  const [schemaFields, setSchemaFields] = useState([]); // Stores field definitions (name, type)
+  const [isLoadingSchema, setIsLoadingSchema] = useState(false);
+  const [error, setError] = useState('');
 
-  // When the dialog opens, load the data into the form
+  const isEditMode = !!initialData?._id;
+
+  // 1. When dialog opens, load schema AND set initial data
   useEffect(() => {
-    if (open) {
-        // If editing, use existing data. If creating, start empty.
-        setFormData(initialData || {});
+    if (open && collectionName) {
+      setIsLoadingSchema(true);
+      setError('');
+      // Fetch schema definition from backend
+      API.get(`/dynamic/${collectionName.toLowerCase()}/schema`)
+        .then(response => {
+          setSchemaFields(response.data);
+          setIsLoadingSchema(false);
+        })
+        .catch(err => {
+          console.error("Schema fetch error:", err);
+          setError("Could not load form definitions.");
+          setIsLoadingSchema(false);
+        });
+
+      // Initialize form data (if editing, use existing data; otherwise empty)
+      setFormData(initialData || {});
     }
-  }, [open, initialData]);
+  }, [open, collectionName, initialData]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -21,54 +38,86 @@ function GenericFormDialog({ open, onClose, collectionName, initialData, onSucce
 
   const handleSubmit = async () => {
     try {
+      // Clean up data: Ensure empty strings for dates/numbers are sent as null so Mongo doesn't error
+      const cleanedData = { ...formData };
+      schemaFields.forEach(field => {
+          if (cleanedData[field.name] === '' && (field.type === 'Date' || field.type === 'Number')) {
+              cleanedData[field.name] = null;
+          }
+      });
+
       if (isEditMode) {
         // UPDATE existing
-        await API.put(`/dynamic/${collectionName}/${initialData._id}`, formData);
+        await API.put(`/dynamic/${collectionName}/${initialData._id}`, cleanedData);
       } else {
         // CREATE new
-        await API.post(`/dynamic/${collectionName}`, formData);
+        await API.post(`/dynamic/${collectionName}`, cleanedData);
       }
-      onSuccess(); // Tell parent to refresh table
-      onClose();   // Close popup
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error("Error saving data:", error);
-      alert("Failed to save data. Check console.");
+      alert(`Failed to save data: ${error.response?.data || error.message}`);
     }
   };
 
-  // --- THE TRICKY PART: Determining form fields ---
-  // We look at the keys of the initialData object to decide what inputs to show.
-  // We filter out '_id' because you shouldn't edit that manually.
-  const fields = initialData ? Object.keys(initialData).filter(key => key !== '_id') : [];
+  // Helper to format date strings for HTML input type="date" (YYYY-MM-DD)
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        // Ensure valid date before formatting
+        return isNaN(date.getTime()) ? '' : date.toISOString().split('T')[0];
+    } catch (e) { return ''; }
+  };
+
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEditMode ? 'Edit Item' : 'Create New Item'}</DialogTitle>
-      <DialogContent>
-        <Box component="form" sx={{ mt: 2 }}>
-          {fields.length === 0 && !isEditMode && (
-             <p>Warning: Cannot auto-detect fields for a new item because no template data was provided.</p>
-          )}
-          {/* LOOP through detected keys and create a text input for each */}
-          {fields.map((key) => (
-             // Note: We are treating almost everything as a basic text string for simplicity in this "hacky" approach.
-             // Dates will need to be entered manually as YYYY-MM-DD strings.
+      <DialogTitle>{isEditMode ? `Edit ${collectionName.slice(0, -1)}` : `Create New ${collectionName.slice(0, -1)}`}</DialogTitle>
+      <DialogContent dividers>
+        {isLoadingSchema ? (
+           <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>
+        ) : error ? (
+           <Alert severity="error">{error}</Alert>
+        ) : (
+        <Box component="form" sx={{ mt: 1 }}>
+          {/* Loop through schema fields and render smart inputs */}
+          {schemaFields.map((field) => {
+            const label = field.name.charAt(0).toUpperCase() + field.name.slice(1).replace(/([A-Z])/g, ' $1').trim(); // Make nice labels like "firstName" -> "First Name"
+            let inputType = 'text';
+            let inputValue = formData[field.name] || '';
+
+            // Determine input type based on Mongoose schema type
+            if (field.type === 'Date') {
+                inputType = 'date';
+                inputValue = formatDateForInput(inputValue);
+            } else if (field.type === 'Number') {
+                inputType = 'number';
+            }
+
+            return (
             <TextField
-              key={key}
-              margin="dense"
-              label={key.charAt(0).toUpperCase() + key.slice(1)} // Capitalize label
-              name={key}
-              value={formData[key] || ''} // Handle null/undefined values
+              key={field.name}
+              margin="normal"
+              label={label}
+              name={field.name}
+              type={inputType}
+              value={inputValue}
               onChange={handleChange}
               fullWidth
               variant="outlined"
+              required={field.required}
+              // For date inputs, shrink label so it doesn't overlap placeholder
+              InputLabelProps={inputType === 'date' ? { shrink: true } : undefined}
             />
-          ))}
+          )})}
         </Box>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="secondary">Cancel</Button>
-        <Button onClick={handleSubmit} variant="contained" color="primary">
+        <Button onClick={handleSubmit} variant="contained" color="primary" disabled={isLoadingSchema || !!error}>
           {isEditMode ? 'Update' : 'Create'}
         </Button>
       </DialogActions>

@@ -17,26 +17,56 @@ const getModel = (collectionName, res) => {
 
 
 // ==========================================
+//  NEW: SCHEMA DEFINITION ENDPOINT
+// ==========================================
+// GET /api/dynamic/:collectionName/schema
+// Tells the frontend what fields exist and what type they are (String, Date, Number)
+router.route('/:collectionName/schema').get((req, res) => {
+    const Model = getModel(req.params.collectionName, res);
+    if (!Model) return;
+
+    try {
+        // Look at the Mongoose schema paths to figure out fields and types
+        const schemaPaths = Model.schema.paths;
+        const fields = [];
+
+        for (const key in schemaPaths) {
+            // Skip internal Mongoose fields that users shouldn't edit directly
+            if (key === '_id' || key === '__v' || key === 'createdAt' || key === 'updatedAt') {
+                continue;
+            }
+            
+            // Get the type name (e.g., 'String', 'Date', 'Number')
+            const pathType = schemaPaths[key].instance;
+            
+            fields.push({
+                name: key,
+                type: pathType,
+                required: schemaPaths[key].isRequired || false
+            });
+        }
+
+        res.json(fields);
+    } catch (err) {
+        res.status(400).json('Error fetching schema: ' + err.message);
+    }
+});
+
+
+// ==========================================
 //  THE "MATH" SECTION (Aggregation Pipeline)
 // ==========================================
 // POST /api/dynamic/:collectionName/math/group-by
-// Body: { "groupByField": "fieldName" }
 router.route('/:collectionName/math/group-by').post(async (req, res) => {
     const Model = getModel(req.params.collectionName, res);
-    if (!Model) return; // Exit if model not found
+    if (!Model) return;
 
     const groupByField = req.body.groupByField;
     if (!groupByField) return res.status(400).json("Error: Missing 'groupByField'.");
 
     try {
-        // Use Mongoose's powerful aggregate function
         const report = await Model.aggregate([
-            {
-                $group: {
-                    _id: "$" + groupByField, // e.g., "$crimeType"
-                    count: { $sum: 1 }
-                }
-            },
+            { $group: { _id: "$" + groupByField, count: { $sum: 1 } } },
             { $sort: { count: -1 } }
         ]);
         res.json(report);
@@ -54,7 +84,6 @@ router.route('/:collectionName').get(async (req, res) => {
     if (!Model) return;
 
     try {
-        // Mongoose .find() is cleaner than raw DB calls
         const data = await Model.find().sort({ createdAt: -1 }).limit(200);
         res.json(data);
     } catch (err) { res.status(400).json('Error fetching data: ' + err.message); }
@@ -66,13 +95,10 @@ router.route('/:collectionName').post(async (req, res) => {
     if (!Model) return;
 
     try {
-        // Create a new document instance from the request body
         const newItem = new Model(req.body);
-        // .save() triggers Mongoose validation defined in your schema
         const savedItem = await newItem.save();
         res.json({ message: 'Document created successfully!', result: savedItem });
     } catch (err) { 
-        // Mongoose gives good validation error messages
         res.status(400).json('Validation Error: ' + err.message); 
     }
 });
@@ -83,11 +109,8 @@ router.route('/:collectionName/:id').put(async (req, res) => {
     if (!Model) return;
 
     try {
-        // findByIdAndUpdate handles finding by _id and updating safely
         const updatedItem = await Model.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true } // Return the updated doc and run validation
+            req.params.id, req.body, { new: true, runValidators: true }
         );
         if (!updatedItem) return res.status(404).json('Document not found.');
         res.json({ message: 'Document updated successfully!', result: updatedItem });
