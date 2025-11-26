@@ -2,6 +2,35 @@ const router = require('express').Router();
 // Import the blueprint we just created
 let Incident = require('../models/Incident');
 
+// --- NEW ADVANCED ROUTE: Aggregation Report ---
+// Action: Count incidents grouped by their crimeType
+// URL: localhost:5000/api/incidents/report/count-by-type
+router.route('/report/count-by-type').get(async (req, res) => {
+    try {
+        // This is the MongoDB Aggregation Pipeline
+        const report = await Incident.aggregate([
+            {
+                // Step 1: Group documents together by the 'crimeType' field
+                $group: {
+                    _id: "$crimeType", // The field to group by
+                    count: { $sum: 1 }  // For each match, add 1 to a 'count' total
+                }
+            },
+            {
+                // Step 2: (Optional) Sort them by count in descending order (biggest first)
+                $sort: { count: -1 }
+            }
+        ]);
+
+        res.json(report);
+    } catch (err) {
+        res.status(400).json('Error: ' + err);
+    }
+});
+// ---------------------------------------------
+
+
+
 // Action 1: GET ALL Incidents
 // This handles requests to the main door of this service window (e.g., /api/incidents/)
 router.route('/').get(async (req, res) => {
