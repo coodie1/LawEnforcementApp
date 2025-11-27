@@ -6,6 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import API from "@/api.ts";
+import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { toast } from "sonner";
 
 const Cases = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -13,6 +15,8 @@ const Cases = () => {
   const [cases, setCases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedCase, setSelectedCase] = useState<any>(null);
 
   useEffect(() => {
     fetchCases();
@@ -64,7 +68,13 @@ const Cases = () => {
           </h2>
           <p className="text-muted-foreground mt-1">Manage and track all case files</p>
         </div>
-        <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md">
+        <Button 
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md"
+          onClick={() => {
+            setSelectedCase(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Case
         </Button>
@@ -144,13 +154,31 @@ const Cases = () => {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedCase(caseItem);
+                                  setDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to delete case ${caseItem.caseID || caseItem._id}?`)) {
+                                    try {
+                                      await API.delete(`/dynamic/cases/${caseItem._id}`);
+                                      toast.success("Case deleted successfully!");
+                                      fetchCases();
+                                    } catch (err: any) {
+                                      toast.error(err.response?.data || "Failed to delete case");
+                                    }
+                                  }
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -165,6 +193,15 @@ const Cases = () => {
           </div>
         </CardContent>
       </Card>
+
+      <CollectionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collectionName="cases"
+        initialData={selectedCase}
+        onSuccess={fetchCases}
+        title="Cases"
+      />
     </div>
   );
 };

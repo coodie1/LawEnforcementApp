@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import API from "@/api.ts";
+import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { toast } from "sonner";
 
 interface CollectionPageProps {
   collectionName: string;
@@ -29,6 +31,8 @@ const CollectionPage = ({
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
 
   useEffect(() => {
     fetchData();
@@ -78,7 +82,13 @@ const CollectionPage = ({
           </h2>
           <p className="text-muted-foreground mt-1">{description}</p>
         </div>
-        <Button className={`bg-gradient-to-r ${colorGradient} text-white shadow-md hover:opacity-90`}>
+        <Button 
+          className={`bg-gradient-to-r ${colorGradient} text-white shadow-md hover:opacity-90`}
+          onClick={() => {
+            setSelectedItem(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New {title.slice(0, -1)}
         </Button>
@@ -139,13 +149,32 @@ const CollectionPage = ({
                           ))}
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedItem(item);
+                                  setDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={async () => {
+                                  const itemId = item[headers.find(h => h.includes('ID') || h === '_id') || '_id'] || item._id;
+                                  if (window.confirm(`Are you sure you want to delete this ${title.slice(0, -1).toLowerCase()}?`)) {
+                                    try {
+                                      await API.delete(`/dynamic/${collectionName}/${item._id}`);
+                                      toast.success(`${title.slice(0, -1)} deleted successfully!`);
+                                      fetchData();
+                                    } catch (err: any) {
+                                      toast.error(err.response?.data || `Failed to delete ${title.slice(0, -1).toLowerCase()}`);
+                                    }
+                                  }
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -160,6 +189,15 @@ const CollectionPage = ({
           </div>
         </CardContent>
       </Card>
+
+      <CollectionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collectionName={collectionName}
+        initialData={selectedItem}
+        onSuccess={fetchData}
+        title={title}
+      />
     </div>
   );
 };

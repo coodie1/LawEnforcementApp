@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import API from "@/api.ts";
+import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { toast } from "sonner";
 
 const Arrests = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [arrests, setArrests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedArrest, setSelectedArrest] = useState<any>(null);
 
   useEffect(() => {
     fetchArrests();
@@ -48,7 +52,13 @@ const Arrests = () => {
           </h2>
           <p className="text-muted-foreground mt-1">Track all arrest records</p>
         </div>
-        <Button className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-md">
+        <Button 
+          className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-md"
+          onClick={() => {
+            setSelectedArrest(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Arrest
         </Button>
@@ -109,13 +119,31 @@ const Arrests = () => {
                           <TableCell>{arrest.charges || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedArrest(arrest);
+                                  setDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to delete arrest ${arrest.arrestID || arrest._id}?`)) {
+                                    try {
+                                      await API.delete(`/dynamic/arrests/${arrest._id}`);
+                                      toast.success("Arrest deleted successfully!");
+                                      fetchArrests();
+                                    } catch (err: any) {
+                                      toast.error(err.response?.data || "Failed to delete arrest");
+                                    }
+                                  }
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -130,6 +158,15 @@ const Arrests = () => {
           </div>
         </CardContent>
       </Card>
+
+      <CollectionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collectionName="arrests"
+        initialData={selectedArrest}
+        onSuccess={fetchArrests}
+        title="Arrests"
+      />
     </div>
   );
 };

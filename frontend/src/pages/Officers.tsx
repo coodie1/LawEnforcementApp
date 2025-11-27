@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import API from "@/api.ts";
+import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { toast } from "sonner";
 
 const Officers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [officers, setOfficers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedOfficer, setSelectedOfficer] = useState<any>(null);
 
   useEffect(() => {
     fetchOfficers();
@@ -48,7 +52,13 @@ const Officers = () => {
           </h2>
           <p className="text-muted-foreground mt-1">Manage law enforcement personnel</p>
         </div>
-        <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md">
+        <Button 
+          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md"
+          onClick={() => {
+            setSelectedOfficer(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Officer
         </Button>
@@ -107,13 +117,31 @@ const Officers = () => {
                           <TableCell>{officer.rank || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOfficer(officer);
+                                  setDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to delete officer ${officer.officerID || officer._id}?`)) {
+                                    try {
+                                      await API.delete(`/dynamic/officers/${officer._id}`);
+                                      toast.success("Officer deleted successfully!");
+                                      fetchOfficers();
+                                    } catch (err: any) {
+                                      toast.error(err.response?.data || "Failed to delete officer");
+                                    }
+                                  }
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -128,6 +156,15 @@ const Officers = () => {
           </div>
         </CardContent>
       </Card>
+
+      <CollectionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collectionName="officers"
+        initialData={selectedOfficer}
+        onSuccess={fetchOfficers}
+        title="Officers"
+      />
     </div>
   );
 };

@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import API from "@/api.ts";
+import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { toast } from "sonner";
 
 const Departments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [departments, setDepartments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
 
   useEffect(() => {
     fetchDepartments();
@@ -48,7 +52,13 @@ const Departments = () => {
           </h2>
           <p className="text-muted-foreground mt-1">Manage department information</p>
         </div>
-        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md">
+        <Button 
+          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md"
+          onClick={() => {
+            setSelectedDepartment(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-2" />
           New Department
         </Button>
@@ -105,13 +115,31 @@ const Departments = () => {
                           <TableCell>{dept.headOfficerID || 'N/A'}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedDepartment(dept);
+                                  setDialogOpen(true);
+                                }}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={async () => {
+                                  if (window.confirm(`Are you sure you want to delete department ${dept.departmentID || dept._id}?`)) {
+                                    try {
+                                      await API.delete(`/dynamic/departments/${dept._id}`);
+                                      toast.success("Department deleted successfully!");
+                                      fetchDepartments();
+                                    } catch (err: any) {
+                                      toast.error(err.response?.data || "Failed to delete department");
+                                    }
+                                  }
+                                }}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -126,6 +154,15 @@ const Departments = () => {
           </div>
         </CardContent>
       </Card>
+
+      <CollectionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collectionName="departments"
+        initialData={selectedDepartment}
+        onSuccess={fetchDepartments}
+        title="Departments"
+      />
     </div>
   );
 };
