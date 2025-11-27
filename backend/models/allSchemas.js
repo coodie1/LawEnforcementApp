@@ -157,22 +157,22 @@ const userSchema = new Schema({
 // ==============================================================================
 // We map the lowercase, plural collection name to its corresponding Mongoose Model.
 const models = {
-    incidents: mongoose.model('Incident', incidentSchema),
-    people: mongoose.model('Person', personSchema),
-    arrests: mongoose.model('Arrest', arrestSchema),
-    charges: mongoose.model('Charge', chargeSchema),
-    cases: mongoose.model('Case', caseSchema),
-    departments: mongoose.model('Department', departmentSchema),
-    officers: mongoose.model('Officer', officerSchema),
-    locations: mongoose.model('Location', locationSchema),
-    evidence: mongoose.model('Evidence', evidenceSchema),
-    forensics: mongoose.model('Forensic', forensicSchema),
-    reports: mongoose.model('Report', reportSchema),
-    prisons: mongoose.model('Prison', prisonSchema),
-    sentences: mongoose.model('Sentence', sentenceSchema),
-    vehicles: mongoose.model('Vehicle', vehicleSchema),
-    weapons: mongoose.model('Weapon', weaponSchema),
-    users: mongoose.model('User', userSchema),
+    incidents: mongoose.model('Incident', incidentSchema, 'incidents'),
+    people: mongoose.model('Person', personSchema, 'people'),
+    arrests: mongoose.model('Arrest', arrestSchema, 'arrests'),
+    charges: mongoose.model('Charge', chargeSchema, 'charges'),
+    cases: mongoose.model('Case', caseSchema, 'cases'),
+    departments: mongoose.model('Department', departmentSchema, 'departments'),
+    officers: mongoose.model('Officer', officerSchema, 'officers'),
+    locations: mongoose.model('Location', locationSchema, 'locations'),
+    evidence: mongoose.model('Evidence', evidenceSchema, 'evidence'), // Explicitly use 'evidence' (singular) collection
+    forensics: mongoose.model('Forensic', forensicSchema, 'forensics'),
+    reports: mongoose.model('Report', reportSchema, 'reports'),
+    prisons: mongoose.model('Prison', prisonSchema, 'prisons'),
+    sentences: mongoose.model('Sentence', sentenceSchema, 'sentences'),
+    vehicles: mongoose.model('Vehicle', vehicleSchema, 'vehicles'),
+    weapons: mongoose.model('Weapon', weaponSchema, 'weapons'),
+    users: mongoose.model('User', userSchema, 'users'),
 };
 
 module.exports = models;
