@@ -1,33 +1,44 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import MainLayout from './components/MainLayout';
-
-// --- ONLY IMPORT THE UNIVERSAL COMPONENT NOW ---
-// We have deleted IncidentList and IncidentForm.
-// Everything uses this one powerful component.
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
 import GenericCollectionTable from './components/GenericCollectionTable';
+import { CircularProgress, Box } from '@mui/material';
 
 import './App.css';
 
-// A simple placeholder for the home page dashboard
-function DashboardPlaceholder() {
-  return (
-    <div style={{ padding: '20px' }}>
-      <h2>Dashboard</h2>
-      <p>Welcome to the CrimeDB Admin Panel.</p>
-      <p>Select a module from the sidebar to manage data.</p>
-      <p style={{marginTop: '20px', color: 'gray'}}>(Charts and stats will appear here)</p>
-    </div>
-  );
+// Protected Route wrapper
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  return children;
 }
 
 function App() {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          {/* The MainLayout wraps everything so the sidebar is always there */}
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<DashboardPlaceholder />} />
+    <AuthProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Login Route */}
+            <Route path="/login" element={<Login />} />
+
+            {/* Protected Routes */}
+            <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+              <Route index element={<Dashboard />} />
             
             {/* === ALL 15 ROUTES ARE NOW UNIFIED === */}
             {/* They all use the same component, just passing a different name. */}
@@ -49,11 +60,12 @@ function App() {
             <Route path="forensics" element={<GenericCollectionTable collectionName="forensics" />} />
 
             {/* Redirect any unknown URLs back to the dashboard */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </div>
-    </Router>
+              <Route path="*" element={<Navigate to="/" />} />
+            </Route>
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

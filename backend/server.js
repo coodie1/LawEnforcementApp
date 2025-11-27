@@ -36,7 +36,12 @@ app.get('/', (req, res) => {
 // Routes
 // All API requests go to the one dynamic router
 const dynamicRouter = require('./routes/dynamic');
+const authRouter = require('./routes/auth');
+const statsRouter = require('./routes/stats');
+
 app.use('/api/dynamic', dynamicRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/stats', statsRouter);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port: ${PORT}`);

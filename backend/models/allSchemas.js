@@ -135,10 +135,20 @@ const vehicleSchema = new Schema({
 const weaponSchema = new Schema({
     weaponID: { type: String, required: true, unique: true },
     type: { type: String },
-    manufacturer: { type: String },
+    make: { type: String },
     model: { type: String },
     serialNumber: { type: String },
     associatedEvidenceID: { type: String },
+}, { strict: false, timestamps: true });
+
+const userSchema = new Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['officer', 'public'], default: 'public', required: true },
+    firstName: { type: String },
+    lastName: { type: String },
+    badgeNumber: { type: String },
+    email: { type: String },
 }, { strict: false, timestamps: true });
 
 
@@ -162,6 +172,7 @@ const models = {
     sentences: mongoose.model('Sentence', sentenceSchema),
     vehicles: mongoose.model('Vehicle', vehicleSchema),
     weapons: mongoose.model('Weapon', weaponSchema),
+    users: mongoose.model('User', userSchema),
 };
 
 module.exports = models;

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import API from '../api';
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, CircularProgress, Button, Stack, IconButton, Box, Card, CardContent, CardActionArea, TextField, InputAdornment
@@ -12,6 +13,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import GenericFormDialog from './GenericFormDialog';
 
 function GenericCollectionTable({ collectionName }) {
+  const { isOfficer } = useAuth();
   // Modes: 'selection' (initial), 'read' (view only), 'write' (manage/search/delete)
   const [viewMode, setViewMode] = useState('selection');
   const [data, setData] = useState([]);
@@ -80,6 +82,18 @@ function GenericCollectionTable({ collectionName }) {
 
 
   // --- RENDER 1: SELECTION SCREEN (Requirement 1) ---
+  // Auto-select mode based on user role
+  useEffect(() => {
+    if (viewMode === 'selection') {
+      if (isOfficer()) {
+        // Officers can choose mode
+      } else {
+        // Public users automatically go to read-only mode
+        setViewMode('read');
+      }
+    }
+  }, [viewMode, isOfficer]);
+
   if (viewMode === 'selection') {
     return (
       <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -92,14 +106,21 @@ function GenericCollectionTable({ collectionName }) {
               <Typography variant="h6">View Only</Typography>
             </CardActionArea>
           </Card>
-          <Card sx={{ minWidth: 200, textAlign: 'center', border: '1px solid #ddd', backgroundColor: '#f9fbe7' }}>
-             <CardActionArea onClick={() => setViewMode('write')} sx={{ p: 3 }}>
-              <BuildIcon color="secondary" sx={{ fontSize: 60, mb: 2 }} />
-              <Typography variant="h6">Manage Records</Typography>
-              <Typography variant="body2">(Create, Search, Update, Delete)</Typography>
-            </CardActionArea>
-          </Card>
+          {isOfficer() && (
+            <Card sx={{ minWidth: 200, textAlign: 'center', border: '1px solid #ddd', backgroundColor: '#f9fbe7' }}>
+              <CardActionArea onClick={() => setViewMode('write')} sx={{ p: 3 }}>
+                <BuildIcon color="secondary" sx={{ fontSize: 60, mb: 2 }} />
+                <Typography variant="h6">Manage Records</Typography>
+                <Typography variant="body2">(Create, Search, Update, Delete)</Typography>
+              </CardActionArea>
+            </Card>
+          )}
         </Stack>
+        {!isOfficer() && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            You have read-only access as a public user
+          </Typography>
+        )}
       </Box>
     );
   }
@@ -116,16 +137,16 @@ function GenericCollectionTable({ collectionName }) {
                   <Typography variant="h6">
                     {capitalize(collectionName)} ({viewMode === 'read' ? 'View Only' : 'Managing'})
                   </Typography>
-                  <Button size="small" onClick={() => setViewMode('selection')}>Switch Mode</Button>
+                  {isOfficer() && <Button size="small" onClick={() => setViewMode('selection')}>Switch Mode</Button>}
               </Stack>
-              {/* Create Button only in 'write' mode (Requirement 2 strategy) */}
-              {viewMode === 'write' && (
+              {/* Create Button only in 'write' mode and for officers */}
+              {viewMode === 'write' && isOfficer() && (
                   <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreateOpen}>Create New</Button>
               )}
           </Stack>
 
-          {/* SEARCH BAR - Only in 'write' mode (Requirement 3) */}
-          {viewMode === 'write' && (
+          {/* SEARCH BAR - Only in 'write' mode and for officers */}
+          {viewMode === 'write' && isOfficer() && (
             <TextField
               fullWidth
               variant="outlined"
@@ -150,7 +171,7 @@ function GenericCollectionTable({ collectionName }) {
                   {header === '_id' ? 'ID' : header.toUpperCase()}
                 </TableCell>
               ))}
-              {viewMode === 'write' && <TableCell style={{ fontWeight: 'bold', backgroundColor: '#eee' }}>ACTIONS</TableCell>}
+              {viewMode === 'write' && isOfficer() && <TableCell style={{ fontWeight: 'bold', backgroundColor: '#eee' }}>ACTIONS</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -162,8 +183,8 @@ function GenericCollectionTable({ collectionName }) {
                       {typeof row[header] === 'object' && row[header] !== null ? JSON.stringify(row[header]) : row[header]}
                   </TableCell>
                 ))}
-                {/* Actions only in 'write' mode */}
-                {viewMode === 'write' && (
+                {/* Actions only in 'write' mode and for officers */}
+                {viewMode === 'write' && isOfficer() && (
                     <TableCell>
                         <IconButton color="primary" size="small" onClick={() => handleEditOpen(row)}><EditIcon /></IconButton>
                         <IconButton color="error" size="small" onClick={() => handleDelete(row._id)}><DeleteIcon /></IconButton>
