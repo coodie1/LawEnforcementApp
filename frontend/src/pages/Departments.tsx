@@ -41,20 +41,22 @@ const Departments = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b-2 border-purple-200">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Departments</h2>
-          <p className="text-muted-foreground">Manage department information</p>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Departments
+          </h2>
+          <p className="text-muted-foreground mt-1">Manage department information</p>
         </div>
-        <Button>
+        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md">
           <Plus className="h-4 w-4 mr-2" />
           New Department
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Departments</CardTitle>
+      <Card className="border-t-4 border-t-purple-500">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
+          <CardTitle className="text-purple-900">All Departments</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

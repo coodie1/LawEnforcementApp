@@ -57,20 +57,22 @@ const Cases = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b-2 border-blue-200">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Cases</h2>
-          <p className="text-muted-foreground">Manage and track all case files</p>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            Cases
+          </h2>
+          <p className="text-muted-foreground mt-1">Manage and track all case files</p>
         </div>
-        <Button>
+        <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md">
           <Plus className="h-4 w-4 mr-2" />
           New Case
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Cases</CardTitle>
+      <Card className="border-t-4 border-t-blue-500">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardTitle className="text-blue-900">All Cases</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

@@ -41,20 +41,22 @@ const Arrests = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b-2 border-red-200">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Arrests</h2>
-          <p className="text-muted-foreground">Track all arrest records</p>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
+            Arrests
+          </h2>
+          <p className="text-muted-foreground mt-1">Track all arrest records</p>
         </div>
-        <Button>
+        <Button className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-md">
           <Plus className="h-4 w-4 mr-2" />
           New Arrest
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Arrests</CardTitle>
+      <Card className="border-t-4 border-t-red-500">
+        <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50">
+          <CardTitle className="text-red-900">All Arrests</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

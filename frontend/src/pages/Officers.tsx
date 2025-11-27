@@ -41,20 +41,22 @@ const Officers = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between pb-4 border-b-2 border-green-200">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Officers</h2>
-          <p className="text-muted-foreground">Manage law enforcement personnel</p>
+          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            Officers
+          </h2>
+          <p className="text-muted-foreground mt-1">Manage law enforcement personnel</p>
         </div>
-        <Button>
+        <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-md">
           <Plus className="h-4 w-4 mr-2" />
           New Officer
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>All Officers</CardTitle>
+      <Card className="border-t-4 border-t-green-500">
+        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
+          <CardTitle className="text-green-900">All Officers</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
