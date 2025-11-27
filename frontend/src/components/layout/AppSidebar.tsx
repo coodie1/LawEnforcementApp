@@ -51,9 +51,14 @@ const menuItems = [
 
 export function AppSidebar() {
   const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border px-6 py-4">
+      <SidebarHeader className="border-t border-sidebar-border px-6 py-4">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6 text-sidebar-primary" />
           <div>
@@ -91,12 +96,9 @@ export function AppSidebar() {
       <SidebarFooter className="border-t border-sidebar-border p-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={logout}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive w-full justify-start"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              <span>Log Out</span>
+            <SidebarMenuButton onClick={handleLogout} className="text-red-500 hover:text-red-600 hover:bg-red-50">
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

@@ -1,14 +1,16 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 import { User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const { user } = useAuth();
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -21,12 +23,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <h1 className="text-xl font-semibold text-foreground">Crime & Law Enforcement System</h1>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-sm">
-                <User className="h-4 w-4" />
-                <span className="text-muted-foreground">Officer Admin</span>
+            <div className="flex items-center gap-2 text-sm">
+              <User className="h-4 w-4" />
+              <div className="flex flex-col items-end">
+                <span className="font-medium">{user?.firstName || user?.username || 'User'} {user?.lastName || ''}</span>
+                <span className="text-xs text-muted-foreground capitalize">{user?.role || 'public'}</span>
               </div>
-
             </div>
           </header>
 

@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { Briefcase, UserX, Shield, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { statsAPI } from "@/api";
+import { statsAPI } from "@/api.ts";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--warning))', 'hsl(var(--success))'];
 

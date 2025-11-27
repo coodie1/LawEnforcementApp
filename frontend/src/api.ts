@@ -27,6 +27,7 @@ export const authAPI = {
         email?: string;
         firstName?: string;
         lastName?: string;
+        role?: string;
     }): Promise<AuthResponse> => {
         const { data } = await API.post('/auth/register', userData);
         return data;

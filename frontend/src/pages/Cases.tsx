@@ -1,18 +1,41 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
-import { mockCases } from "@/lib/mockData";
 import { Badge } from "@/components/ui/badge";
+import API from "@/api.ts";
 
 const Cases = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cases, setCases] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredCases = mockCases.filter((caseItem) => {
-    const matchesSearch = caseItem.caseID.toLowerCase().includes(searchTerm.toLowerCase());
+  useEffect(() => {
+    fetchCases();
+  }, []);
+
+  const fetchCases = async () => {
+    try {
+      setIsLoading(true);
+      const response = await API.get('/dynamic/cases');
+      setCases(response.data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data || 'Failed to load cases');
+      console.error('Error fetching cases:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredCases = cases.filter((caseItem) => {
+    const matchesSearch =
+      (caseItem.caseID?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+      (caseItem.incidentID?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
     const matchesStatus = statusFilter === "all" || caseItem.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -77,46 +100,65 @@ const Cases = () => {
 
             {/* Table */}
             <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Case ID</TableHead>
-                    <TableHead>Incident ID</TableHead>
-                    <TableHead>Lead Officer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Opening Date</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCases.map((caseItem) => (
-                    <TableRow key={caseItem.caseID}>
-                      <TableCell className="font-medium">{caseItem.caseID}</TableCell>
-                      <TableCell>{caseItem.incidentID}</TableCell>
-                      <TableCell>{caseItem.leadOfficerID}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getStatusColor(caseItem.status)}>
-                          {caseItem.status.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(caseItem.openingDate).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {error && (
+                <div className="p-4 text-destructive text-sm">{error}</div>
+              )}
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground">Loading cases...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Case ID</TableHead>
+                      <TableHead>Incident ID</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCases.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          No cases found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredCases.map((caseItem) => (
+                        <TableRow key={caseItem._id || caseItem.caseID}>
+                          <TableCell className="font-medium">{caseItem.caseID || 'N/A'}</TableCell>
+                          <TableCell>{caseItem.incidentID || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={getStatusColor(caseItem.status || 'pending')}>
+                              {(caseItem.status || 'pending').replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {caseItem.startDate ? new Date(caseItem.startDate).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            {caseItem.endDate ? new Date(caseItem.endDate).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
         </CardContent>

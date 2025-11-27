@@ -1,19 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
-import { mockOfficers } from "@/lib/mockData";
+import API from "@/api.ts";
 
 const Officers = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [officers, setOfficers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredOfficers = mockOfficers.filter((officer) =>
-    officer.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    officer.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    officer.badgeNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    fetchOfficers();
+  }, []);
+
+  const fetchOfficers = async () => {
+    try {
+      setIsLoading(true);
+      const response = await API.get('/dynamic/officers');
+      setOfficers(response.data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data || 'Failed to load officers');
+      console.error('Error fetching officers:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredOfficers = officers.filter((officer) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      (officer.officerID?.toLowerCase().includes(searchLower) || '') ||
+      (officer.badgeNumber?.toLowerCase().includes(searchLower) || '') ||
+      (officer.personID?.toLowerCase().includes(searchLower) || '')
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -47,42 +71,57 @@ const Officers = () => {
 
             {/* Table */}
             <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Officer ID</TableHead>
-                    <TableHead>Badge Number</TableHead>
-                    <TableHead>First Name</TableHead>
-                    <TableHead>Last Name</TableHead>
-                    <TableHead>Department ID</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOfficers.map((officer) => (
-                    <TableRow key={officer.officerID}>
-                      <TableCell className="font-medium">{officer.officerID}</TableCell>
-                      <TableCell>{officer.badgeNumber}</TableCell>
-                      <TableCell>{officer.firstName}</TableCell>
-                      <TableCell>{officer.lastName}</TableCell>
-                      <TableCell>{officer.departmentID}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              {error && (
+                <div className="p-4 text-destructive text-sm">{error}</div>
+              )}
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground">Loading officers...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Officer ID</TableHead>
+                      <TableHead>Badge Number</TableHead>
+                      <TableHead>Person ID</TableHead>
+                      <TableHead>Department ID</TableHead>
+                      <TableHead>Rank</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOfficers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground">
+                          No officers found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredOfficers.map((officer) => (
+                        <TableRow key={officer._id || officer.officerID}>
+                          <TableCell className="font-medium">{officer.officerID || 'N/A'}</TableCell>
+                          <TableCell>{officer.badgeNumber || 'N/A'}</TableCell>
+                          <TableCell>{officer.personID || 'N/A'}</TableCell>
+                          <TableCell>{officer.departmentID || 'N/A'}</TableCell>
+                          <TableCell>{officer.rank || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </div>
           </div>
         </CardContent>

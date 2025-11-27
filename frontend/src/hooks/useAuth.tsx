@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../api';
+import { authAPI } from '../api.ts';
 import type { User } from '../types';
 
 interface AuthContextType {
     user: User | null;
     token: string | null;
     login: (username: string, password: string) => Promise<void>;
+    register: (username: string, password: string, firstName?: string, lastName?: string, role?: string) => Promise<void>;
     logout: () => void;
     isAuthenticated: boolean;
     isLoading: boolean;
@@ -38,6 +39,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user', JSON.stringify(response.user));
     };
 
+    const register = async (username: string, password: string, firstName?: string, lastName?: string, role?: string) => {
+        const response = await authAPI.register({ username, password, firstName, lastName, role });
+        setToken(response.token);
+        setUser(response.user);
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+    };
+
     const logout = () => {
         setToken(null);
         setUser(null);
@@ -51,6 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 user,
                 token,
                 login,
+                register,
                 logout,
                 isAuthenticated: !!token,
                 isLoading,
