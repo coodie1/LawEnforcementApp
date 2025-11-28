@@ -112,10 +112,10 @@ export function CollectionFormDialog({
 
       if (isEditMode) {
         await API.put(`/dynamic/${collectionName}/${initialData._id}`, cleanedData);
-        toast.success(`${title.slice(0, -1)} updated successfully!`);
+        toast.success(`${getSingularTitle(title)} updated successfully!`);
       } else {
         await API.post(`/dynamic/${collectionName}`, cleanedData);
-        toast.success(`${title.slice(0, -1)} created successfully!`);
+        toast.success(`${getSingularTitle(title)} created successfully!`);
       }
 
       onSuccess();
@@ -140,6 +140,33 @@ export function CollectionFormDialog({
     }
   };
 
+  // Helper function to convert plural title to singular
+  const getSingularTitle = (pluralTitle: string): string => {
+    const specialCases: { [key: string]: string } = {
+      'People': 'Person',
+      'Cases': 'Case',
+      'Arrests': 'Arrest',
+      'Officers': 'Officer',
+      'Departments': 'Department',
+      'Incidents': 'Incident',
+      'Charges': 'Charge',
+      'Locations': 'Location',
+      'Evidence': 'Evidence',
+      'Forensics': 'Forensic',
+      'Reports': 'Report',
+      'Prisons': 'Prison',
+      'Sentences': 'Sentence',
+      'Vehicles': 'Vehicle',
+      'Weapons': 'Weapon',
+    };
+    
+    if (specialCases[pluralTitle]) {
+      return specialCases[pluralTitle];
+    }
+    
+    return pluralTitle.slice(0, -1);
+  };
+
   const formatLabel = (fieldName: string): string => {
     // Handle acronyms like ID, URL, etc. - keep consecutive capitals together
     // Add space between lowercase and uppercase, but keep consecutive capitals together
@@ -154,9 +181,9 @@ export function CollectionFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? `Edit ${title.slice(0, -1)}` : `Create New ${title.slice(0, -1)}`}</DialogTitle>
+          <DialogTitle>{isEditMode ? `Edit ${getSingularTitle(title)}` : `Create New ${getSingularTitle(title)}`}</DialogTitle>
           <DialogDescription>
-            {isEditMode ? `Update the ${title.slice(0, -1).toLowerCase()} information` : `Fill in the details to create a new ${title.slice(0, -1).toLowerCase()}`}
+            {isEditMode ? `Update the ${getSingularTitle(title).toLowerCase()} information` : `Fill in the details to create a new ${getSingularTitle(title).toLowerCase()}`}
           </DialogDescription>
         </DialogHeader>
 

@@ -40,7 +40,8 @@ const Arrests = () => {
     return (
       (arrest.arrestID?.toLowerCase().includes(searchLower) || '') ||
       (arrest.personID?.toLowerCase().includes(searchLower) || '') ||
-      (arrest.incidentID?.toLowerCase().includes(searchLower) || '')
+      (arrest.caseID?.toLowerCase().includes(searchLower) || '') ||
+      (arrest.locationID?.toLowerCase().includes(searchLower) || '')
     );
   });
 
@@ -96,9 +97,9 @@ const Arrests = () => {
                     <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Arrest ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Person ID</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Incident ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Case ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Charges</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -117,11 +118,11 @@ const Arrests = () => {
                         >
                           <TableCell className="font-medium text-sm py-2.5">{arrest.arrestID || 'N/A'}</TableCell>
                           <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.personID || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.incidentID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.caseID || 'N/A'}</TableCell>
                           <TableCell className="text-sm py-2.5 text-muted-foreground">
                             {arrest.date ? new Date(arrest.date).toLocaleDateString() : 'N/A'}
                           </TableCell>
-                          <TableCell className="text-sm py-2.5">{arrest.charges || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.locationID || 'N/A'}</TableCell>
                           <TableCell className="text-right py-2.5">
                             <div className="flex justify-end gap-1.5">
                               <Button 

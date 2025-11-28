@@ -40,7 +40,9 @@ const Officers = () => {
     return (
       (officer.officerID?.toLowerCase().includes(searchLower) || '') ||
       (officer.badgeNumber?.toLowerCase().includes(searchLower) || '') ||
-      (officer.personID?.toLowerCase().includes(searchLower) || '')
+      (officer.firstName?.toLowerCase().includes(searchLower) || '') ||
+      (officer.lastName?.toLowerCase().includes(searchLower) || '') ||
+      (officer.departmentID?.toLowerCase().includes(searchLower) || '')
     );
   });
 
@@ -96,9 +98,9 @@ const Officers = () => {
                     <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Officer ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Badge Number</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Person ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">First Name</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Last Name</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Department ID</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Rank</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -117,9 +119,9 @@ const Officers = () => {
                         >
                           <TableCell className="font-medium text-sm py-2.5">{officer.officerID || 'N/A'}</TableCell>
                           <TableCell className="text-sm py-2.5 text-muted-foreground">{officer.badgeNumber || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">{officer.personID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5">{officer.firstName || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5">{officer.lastName || 'N/A'}</TableCell>
                           <TableCell className="text-sm py-2.5 text-muted-foreground">{officer.departmentID || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5">{officer.rank || 'N/A'}</TableCell>
                           <TableCell className="text-right py-2.5">
                             <div className="flex justify-end gap-1.5">
                               <Button 

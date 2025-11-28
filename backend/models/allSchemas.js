@@ -11,61 +11,55 @@ const incidentSchema = new Schema({
     incidentID: { type: String, required: true, unique: true },
     title: { type: String, required: true },
     crimeType: { type: String, required: true },
-    date: { type: Date, required: true },
-    locationID: { type: String },
+    date: { type: String, required: true },
+    locationID: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const personSchema = new Schema({
     personID: { type: String, required: true, unique: true },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
-    dateOfBirth: { type: Date },
-    gender: { type: String },
-    contactInfo: { type: String },
-    address: { type: String },
+    dateOfBirth: { type: String, required: true },
+    roles: { type: [String], required: true },
 }, { strict: false, timestamps: true });
 
 const arrestSchema = new Schema({
     arrestID: { type: String, required: true, unique: true },
     personID: { type: String, required: true },
-    incidentID: { type: String, required: true },
-    date: { type: Date, required: true },
-    charges: { type: String },
-    officerID: { type: String },
+    caseID: { type: String, required: true },
+    date: { type: String, required: true },
+    locationID: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const chargeSchema = new Schema({
     chargeID: { type: String, required: true, unique: true },
     arrestID: { type: String, required: true },
-    crimeType: { type: String, required: true },
-    description: { type: String },
-    severity: { type: String },
+    description: { type: String, required: true },
+    isConvicted: { type: Boolean, required: true },
+    statuteCode: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const caseSchema = new Schema({
     caseID: { type: String, required: true, unique: true },
     incidentID: { type: String, required: true },
-    status: { type: String },
-    startDate: { type: Date },
-    endDate: { type: Date },
-    court: { type: String },
-    judge: { type: String },
+    leadOfficerID: { type: String, required: true },
+    status: { type: String, required: true },
+    openingDate: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const departmentSchema = new Schema({
     departmentID: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    locationID: { type: String },
-    headOfficerID: { type: String },
+    locationID: { type: String, required: true },
+    headOfficerID: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const officerSchema = new Schema({
     officerID: { type: String, required: true, unique: true },
-    personID: { type: String, required: true },
     badgeNumber: { type: String, required: true },
-    departmentID: { type: String },
-    rank: { type: String },
-    startDate: { type: Date },
+    departmentID: { type: String, required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const locationSchema = new Schema({
@@ -73,72 +67,62 @@ const locationSchema = new Schema({
     address: { type: String },
     city: { type: String },
     state: { type: String },
-    zipCode: { type: String },
+    coordinates: { type: [Number] }, // [latitude, longitude]
 }, { strict: false, timestamps: true });
 
 const evidenceSchema = new Schema({
     evidenceID: { type: String, required: true, unique: true },
-    incidentID: { type: String },
-    description: { type: String },
-    collectionDate: { type: Date },
-    collectedByOfficerID: { type: String },
-    locationID: { type: String },
-    type: { type: String },
+    caseID: { type: String, required: true },
+    description: { type: String, required: true },
+    storageLocation: { type: String, required: true },
+    type: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const forensicSchema = new Schema({
-    forensicID: { type: String, required: true, unique: true },
+    forensicsID: { type: String, required: true, unique: true },
     evidenceID: { type: String, required: true },
-    analysisDate: { type: Date },
-    analystName: { type: String },
-    results: { type: String },
-    labReportID: { type: String },
+    caseID: { type: String, required: true },
+    analysisType: { type: String, required: true },
+    dateAnalyzed: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const reportSchema = new Schema({
     reportID: { type: String, required: true, unique: true },
-    incidentID: { type: String },
-    reportingOfficerID: { type: String },
-    dateCreated: { type: Date },
-    content: { type: String },
-    type: { type: String },
+    caseID: { type: String, required: true },
+    authorID: { type: String, required: true },
+    dateFiled: { type: String, required: true },
+    reportType: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const prisonSchema = new Schema({
     prisonID: { type: String, required: true, unique: true },
     name: { type: String, required: true },
-    locationID: { type: String },
-    capacity: { type: Number },
-    warden: { type: String },
+    locationID: { type: String, required: true },
+    securityLevel: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const sentenceSchema = new Schema({
     sentenceID: { type: String, required: true, unique: true },
     caseID: { type: String, required: true },
     personID: { type: String, required: true },
-    prisonID: { type: String },
-    startDate: { type: Date },
-    endDate: { type: Date },
-    terms: { type: String },
+    duration: { type: String, required: true },
+    type: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const vehicleSchema = new Schema({
     vehicleID: { type: String, required: true, unique: true },
-    make: { type: String },
-    model: { type: String },
-    year: { type: Number },
-    color: { type: String },
-    licensePlate: { type: String },
-    ownerPersonID: { type: String },
+    caseID: { type: String, required: true },
+    make: { type: String, required: true },
+    model: { type: String, required: true },
+    licensePlate: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const weaponSchema = new Schema({
     weaponID: { type: String, required: true, unique: true },
-    type: { type: String },
-    make: { type: String },
-    model: { type: String },
-    serialNumber: { type: String },
-    associatedEvidenceID: { type: String },
+    incidentID: { type: String, required: true },
+    ownerID: { type: String, required: true },
+    serialNumber: { type: String, required: true },
+    type: { type: String, required: true },
 }, { strict: false, timestamps: true });
 
 const userSchema = new Schema({
@@ -166,7 +150,7 @@ const models = {
     officers: mongoose.model('Officer', officerSchema, 'officers'),
     locations: mongoose.model('Location', locationSchema, 'locations'),
     evidence: mongoose.model('Evidence', evidenceSchema, 'evidence'), // Explicitly use 'evidence' (singular) collection
-    forensics: mongoose.model('Forensic', forensicSchema, 'forensics'),
+    forensics: mongoose.model('Forensic', forensicSchema, 'forensics'), // Note: schema uses 'forensicsID' but model name is 'Forensic'
     reports: mongoose.model('Report', reportSchema, 'reports'),
     prisons: mongoose.model('Prison', prisonSchema, 'prisons'),
     sentences: mongoose.model('Sentence', sentenceSchema, 'sentences'),

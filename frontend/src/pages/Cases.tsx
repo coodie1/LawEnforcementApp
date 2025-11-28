@@ -41,17 +41,19 @@ const Cases = () => {
     const matchesSearch =
       (caseItem.caseID?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
       (caseItem.incidentID?.toLowerCase().includes(searchTerm.toLowerCase()) || '');
-    const matchesStatus = statusFilter === "all" || caseItem.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || caseItem.status?.toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const statusLower = status?.toLowerCase() || '';
+    switch (statusLower) {
       case "open":
         return "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800";
       case "closed":
         return "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700";
       case "under_investigation":
+      case "under investigation":
         return "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800";
       case "pending":
         return "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800";
@@ -126,15 +128,14 @@ const Cases = () => {
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Case ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Incident ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Start Date</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">End Date</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Opening Date</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredCases.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground text-sm py-8">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground text-sm py-8">
                           No cases found
                         </TableCell>
                       </TableRow>
@@ -148,14 +149,11 @@ const Cases = () => {
                           <TableCell className="text-sm py-2.5 text-muted-foreground">{caseItem.incidentID || 'N/A'}</TableCell>
                           <TableCell className="py-2.5">
                             <Badge variant="outline" className={`${getStatusColor(caseItem.status || 'pending')} rounded-md px-2 py-0.5 text-xs font-medium`}>
-                              {(caseItem.status || 'pending').replace("_", " ")}
+                              {caseItem.status || 'N/A'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm py-2.5 text-muted-foreground">
-                            {caseItem.startDate ? new Date(caseItem.startDate).toLocaleDateString() : 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">
-                            {caseItem.endDate ? new Date(caseItem.endDate).toLocaleDateString() : 'N/A'}
+                            {caseItem.openingDate ? new Date(caseItem.openingDate).toLocaleDateString() : 'N/A'}
                           </TableCell>
                           <TableCell className="text-right py-2.5">
                             <div className="flex justify-end gap-1.5">

@@ -74,6 +74,35 @@ const CollectionPage = ({
 
   const headers = getHeaders();
 
+  // Helper function to convert plural title to singular for button text
+  const getSingularTitle = (pluralTitle: string): string => {
+    const specialCases: { [key: string]: string } = {
+      'People': 'Person',
+      'Cases': 'Case',
+      'Arrests': 'Arrest',
+      'Officers': 'Officer',
+      'Departments': 'Department',
+      'Incidents': 'Incident',
+      'Charges': 'Charge',
+      'Locations': 'Location',
+      'Evidence': 'Evidence', // Already singular but used as collection name
+      'Forensics': 'Forensic',
+      'Reports': 'Report',
+      'Prisons': 'Prison',
+      'Sentences': 'Sentence',
+      'Vehicles': 'Vehicle',
+      'Weapons': 'Weapon',
+    };
+    
+    // Check if there's a special case
+    if (specialCases[pluralTitle]) {
+      return specialCases[pluralTitle];
+    }
+    
+    // Default: remove last character (works for most plurals ending in 's')
+    return pluralTitle.slice(0, -1);
+  };
+
   // Helper function to convert Tailwind gradient classes to background color
   const getBackgroundFromGradient = (gradientClass: string): string => {
     const colorMap: { [key: string]: string } = {
@@ -146,7 +175,7 @@ const CollectionPage = ({
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
-          New {title.slice(0, -1)}
+          New {getSingularTitle(title)}
         </ShimmerButton>
       </div>
 
@@ -225,13 +254,13 @@ const CollectionPage = ({
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
                                   const itemId = item[headers.find(h => h.includes('ID') || h === '_id') || '_id'] || item._id;
-                                  if (window.confirm(`Are you sure you want to delete this ${title.slice(0, -1).toLowerCase()}?`)) {
+                                  if (window.confirm(`Are you sure you want to delete this ${getSingularTitle(title).toLowerCase()}?`)) {
                                     try {
                                       await API.delete(`/dynamic/${collectionName}/${item._id}`);
-                                      toast.success(`${title.slice(0, -1)} deleted successfully!`);
+                                      toast.success(`${getSingularTitle(title)} deleted successfully!`);
                                       fetchData();
                                     } catch (err: any) {
-                                      toast.error(err.response?.data || `Failed to delete ${title.slice(0, -1).toLowerCase()}`);
+                                      toast.error(err.response?.data || `Failed to delete ${getSingularTitle(title).toLowerCase()}`);
                                     }
                                   }
                                 }}

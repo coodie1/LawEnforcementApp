@@ -13,9 +13,17 @@ router.get('/dashboard', async (req, res) => {
             arrestsByLocationData,
             crimeTypeData
         ] = await Promise.all([
-            models.cases.countDocuments({ status: { $in: ['open', 'under_investigation'] } }),
+            // Case-insensitive match for active cases (Open, open, Under Investigation, etc.)
+            models.cases.countDocuments({ 
+                $or: [
+                    { status: { $regex: /^open$/i } },
+                    { status: { $regex: /under.*investigation/i } },
+                    { status: { $regex: /pending/i } }
+                ]
+            }),
             models.arrests.countDocuments(),
-            models.cases.countDocuments({ status: 'closed' }), // Using closed cases as proxy for convicted/finished
+            // Case-insensitive match for closed cases
+            models.cases.countDocuments({ status: { $regex: /^closed$/i } }),
             models.people.countDocuments(),
             models.arrests.aggregate([
                 { $group: { _id: "$locationID", count: { $sum: 1 } } },
