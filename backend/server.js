@@ -18,9 +18,13 @@ app.use(express.json());
 
 // Database Connection
 const uri = process.env.MONGODB_URI;
-mongoose.connect(uri)
+mongoose.connect(uri, {
+    // MongoDB Atlas connection options
+    retryWrites: true,
+    w: 'majority'
+})
     // IF YOU SEE THIS MESSAGE IN TERMINAL, MONGODB IS WORKING FINE:
-    .then(() => console.log(">>> MongoDB database connection established successfully! <<<"))
+    .then(() => console.log(">>> MongoDB Atlas database connection established successfully! <<<"))
     .catch(err => console.error("MongoDB connection error:", err));
 
 

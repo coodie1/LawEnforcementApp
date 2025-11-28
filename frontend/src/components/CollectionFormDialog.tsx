@@ -13,6 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import API from "@/api.ts";
 import { toast } from "sonner";
 
@@ -168,16 +173,47 @@ export function CollectionFormDialog({
               const label = formatLabel(field.name);
 
               if (field.type === "Date") {
+                const dateValue = fieldValue ? new Date(fieldValue) : undefined;
+                const isValidDate = dateValue && !isNaN(dateValue.getTime());
+                
                 return (
                   <div key={field.name} className="grid gap-2">
                     <Label htmlFor={field.name}>
                       {label} {field.required && <span className="text-destructive">*</span>}
                     </Label>
-                    <Input
-                      id={field.name}
-                      type="date"
-                      value={formatDateForInput(fieldValue)}
-                      onChange={(e) => handleChange(field.name, e.target.value || null)}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          id={field.name}
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !isValidDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {isValidDate ? format(dateValue, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={isValidDate ? dateValue : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              handleChange(field.name, date.toISOString().split('T')[0]);
+                            } else {
+                              handleChange(field.name, null);
+                            }
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    {/* Hidden input for form validation */}
+                    <input
+                      type="hidden"
+                      value={isValidDate ? dateValue.toISOString().split('T')[0] : ""}
                       required={field.required}
                     />
                   </div>
