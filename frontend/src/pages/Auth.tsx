@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DottedSurface } from "@/components/ui/dotted-surface";
 import { Shield } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -43,8 +45,19 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4 relative">
+      <DottedSurface className="size-full" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none absolute -top-10 left-1/2 size-full -translate-x-1/2 rounded-full',
+            'bg-[radial-gradient(ellipse_at_center,hsl(var(--foreground)/.1),transparent_50%)]',
+            'blur-[30px]',
+          )}
+        />
+      </div>
+      <Card className="w-full max-w-md relative z-10">
         <CardHeader className="space-y-4">
           <div className="flex items-center justify-center">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">

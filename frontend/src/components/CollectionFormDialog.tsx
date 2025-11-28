@@ -136,9 +136,12 @@ export function CollectionFormDialog({
   };
 
   const formatLabel = (fieldName: string): string => {
+    // Handle acronyms like ID, URL, etc. - keep consecutive capitals together
+    // Add space between lowercase and uppercase, but keep consecutive capitals together
     return fieldName
-      .replace(/([A-Z])/g, " $1")
-      .replace(/^./, (str) => str.toUpperCase())
+      .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between lowercase and uppercase (e.g., "arrestID" → "arrest ID")
+      .replace(/([A-Z])([A-Z][a-z])/g, '$1 $2') // Add space between consecutive capitals when followed by lowercase (e.g., "XMLHttp" → "XML Http")
+      .replace(/^./, (str) => str.toUpperCase()) // Capitalize first letter
       .trim();
   };
 

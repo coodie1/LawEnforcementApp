@@ -1,46 +1,41 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { User } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { ExpandableSidebar, useExpandableSidebar } from "@/components/ui/expandable-sidebar";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user } = useAuth();
+const MainContent = ({ children }: { children: ReactNode }) => {
+  const { open } = useExpandableSidebar();
 
   return (
-    <SidebarProvider>
+    <div 
+      className="flex-1 flex flex-col transition-all duration-200 min-w-0"
+      style={{ marginLeft: open ? '300px' : '70px' }}
+    >
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-white px-6 shadow-sm">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-semibold" style={{ color: '#0b2c75' }}>
+              Crime & Law Enforcement System
+            </h1>
+          </div>
+        </header>
+
+        <main className="flex-1 p-6 bg-[#F5F7FA] overflow-y-auto">
+          {children}
+        </main>
+      </div>
+  );
+};
+
+export function DashboardLayout({ children }: DashboardLayoutProps) {
+  return (
+    <ExpandableSidebar>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-
-        <div className="flex-1 flex flex-col">
-          <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-gradient-to-r from-white via-blue-50 to-indigo-50 px-6 shadow-sm">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="hover:bg-blue-100 rounded-md transition-colors" />
-              <h1 className="text-xl font-semibold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Crime & Law Enforcement System
-              </h1>
-            </div>
-
-            <div className="flex items-center gap-3 text-sm">
-              <div className="p-2 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100">
-                <User className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="flex flex-col items-end">
-                <span className="font-semibold text-foreground">{user?.firstName || user?.username || 'User'} {user?.lastName || ''}</span>
-                <span className="text-xs text-muted-foreground capitalize">{user?.role || 'public'}</span>
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 p-6">
-            {children}
-          </main>
-        </div>
+        <MainContent>{children}</MainContent>
       </div>
-    </SidebarProvider>
+    </ExpandableSidebar>
   );
 }

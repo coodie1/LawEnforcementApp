@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { ThemeProvider } from "next-themes";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import Cases from "./pages/Cases";
@@ -13,6 +14,7 @@ import Departments from "./pages/Departments";
 import CollectionPage from "./pages/CollectionPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import ClickSpark from "@/components/ClickSpark";
 
 const queryClient = new QueryClient();
 
@@ -296,13 +298,26 @@ const AppRoutes = () => {
 const App = () => (
     <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-            <AuthProvider>
-                <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <AppRoutes />
-                </TooltipProvider>
-            </AuthProvider>
+            <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                <AuthProvider>
+                    <TooltipProvider>
+                        <ClickSpark
+                            sparkColor="#ffffff"
+                            sparkSize={8}
+                            sparkRadius={30}
+                            sparkCount={12}
+                            duration={600}
+                            easing="ease-out"
+                        >
+                            <div className="min-h-screen w-full">
+                                <Toaster />
+                                <Sonner />
+                                <AppRoutes />
+                            </div>
+                        </ClickSpark>
+                    </TooltipProvider>
+                </AuthProvider>
+            </ThemeProvider>
         </BrowserRouter>
     </QueryClientProvider>
 );
