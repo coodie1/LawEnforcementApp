@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
@@ -44,16 +45,20 @@ const Departments = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b-2 border-purple-200">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between pb-3 border-b border-purple-200/60">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Departments
           </h2>
-          <p className="text-muted-foreground mt-1">Manage department information</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Manage department information</p>
         </div>
-        <Button 
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-md"
+        <ShimmerButton 
+          background="linear-gradient(to right, #9333ea, #db2777)"
+          shimmerColor="#ffffff"
+          shimmerDuration="3s"
+          borderRadius="8px"
+          className="shadow-md"
           onClick={() => {
             setSelectedDepartment(null);
             setDialogOpen(true);
@@ -61,15 +66,12 @@ const Departments = () => {
         >
           <Plus className="h-4 w-4 mr-2" />
           New Department
-        </Button>
+        </ShimmerButton>
       </div>
 
-      <Card className="border-t-4 border-t-purple-500">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-          <CardTitle className="text-purple-900">All Departments</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+      <Card className="shadow-sm">
+        <CardContent className="p-4">
+          <div className="space-y-3">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -77,57 +79,62 @@ const Departments = () => {
                 placeholder="Search departments..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9 text-sm"
               />
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="rounded-lg border border-border/50 overflow-hidden shadow-sm">
               {error && (
-                <div className="p-4 text-destructive text-sm">{error}</div>
+                <div className="p-3 text-destructive text-sm bg-destructive/10">{error}</div>
               )}
               {isLoading ? (
-                <div className="p-8 text-center text-muted-foreground">Loading departments...</div>
+                <div className="p-6 text-center text-muted-foreground text-sm">Loading departments...</div>
               ) : (
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Department ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Location ID</TableHead>
-                      <TableHead>Head Officer ID</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                    <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Department ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Head Officer ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDepartments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center text-muted-foreground text-sm py-8">
                           No departments found
                         </TableCell>
                       </TableRow>
                     ) : (
                       filteredDepartments.map((dept) => (
-                        <TableRow key={dept._id || dept.departmentID}>
-                          <TableCell className="font-medium">{dept.departmentID || 'N/A'}</TableCell>
-                          <TableCell>{dept.name || 'N/A'}</TableCell>
-                          <TableCell>{dept.locationID || 'N/A'}</TableCell>
-                          <TableCell>{dept.headOfficerID || 'N/A'}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                        <TableRow 
+                          key={dept._id || dept.departmentID}
+                          className="h-11 border-b border-border/30 hover:bg-muted/20 transition-colors"
+                        >
+                          <TableCell className="font-medium text-sm py-2.5">{dept.departmentID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5">{dept.name || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{dept.locationID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{dept.headOfficerID || 'N/A'}</TableCell>
+                          <TableCell className="text-right py-2.5">
+                            <div className="flex justify-end gap-1.5">
                               <Button 
                                 variant="ghost" 
                                 size="sm"
+                                className="h-8 w-8 p-0 hover:bg-muted"
                                 onClick={() => {
                                   setSelectedDepartment(dept);
                                   setDialogOpen(true);
                                 }}
                               >
-                                <Edit className="h-4 w-4" />
+                                <Edit className="h-3.5 w-3.5" />
                               </Button>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
+                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
                                   if (window.confirm(`Are you sure you want to delete department ${dept.departmentID || dept._id}?`)) {
                                     try {
@@ -140,7 +147,7 @@ const Departments = () => {
                                   }
                                 }}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </TableCell>
