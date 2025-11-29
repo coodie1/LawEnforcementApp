@@ -139,7 +139,7 @@ const Auth = () => {
         >
           {/* Left Side - Branding (Desktop Only) */}
           <div 
-            className="hidden md:flex flex-col justify-between bg-gradient-to-br from-[#0b2c75] via-[#0a1f5c] to-[#0b2c75] p-12 text-white relative overflow-hidden h-full w-full transition-all duration-500 ease-in-out cursor-pointer group"
+            className="hidden md:flex flex-col justify-between bg-gradient-to-br from-[#0b2c75] via-[#0a1f5c] to-[#0b2c75] p-12 text-white relative overflow-hidden h-full w-full transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] cursor-pointer group"
             onMouseEnter={() => {
               if (closeTimeoutRef.current) {
                 clearTimeout(closeTimeoutRef.current);
@@ -214,7 +214,7 @@ const Auth = () => {
 
             {/* Decorative Element that Disappears on Hover */}
             <div className={cn(
-              "absolute right-10 top-1/2 -translate-y-1/2 z-20 transition-all duration-500 ease-in-out",
+              "absolute right-10 top-1/2 -translate-y-1/2 z-20 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]",
               "group-hover:opacity-0 group-hover:translate-x-8 group-hover:pointer-events-none"
             )}>
               <div className="flex flex-col items-center gap-3">
@@ -235,9 +235,9 @@ const Auth = () => {
             className={cn(
               "w-full bg-white dark:bg-slate-900 p-8 md:p-12 flex items-center",
               "md:absolute md:right-0 md:top-0 md:h-full md:w-[500px]",
-              "md:transition-transform md:duration-500 md:ease-in-out md:shadow-2xl",
+              "md:transition-transform md:duration-300 md:ease-[cubic-bezier(0.4,0,0.2,1)] md:shadow-2xl",
               "md:translate-x-full md:z-20 md:overflow-y-auto",
-              "md:backdrop-blur-sm",
+              "md:backdrop-blur-sm md:will-change-transform",
               isHovered && "md:translate-x-0"
             )}
             onMouseEnter={() => {
