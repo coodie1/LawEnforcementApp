@@ -217,8 +217,6 @@ export function CollectionFormDialog({
                       <SelectContent>
                         <SelectItem value="Open">Open</SelectItem>
                         <SelectItem value="Closed">Closed</SelectItem>
-                        <SelectItem value="Under Investigation">Under Investigation</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -276,7 +274,7 @@ export function CollectionFormDialog({
                           {isValidDate ? format(dateValue, "PPP") : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 border-0 shadow-none bg-transparent" align="center" side="bottom" sideOffset={8}>
+                      <PopoverContent className="w-auto p-0 border-0 shadow-none bg-transparent" align="center" side="top" sideOffset={8}>
                         <Calendar
                           mode="single"
                           selected={isValidDate ? dateValue : undefined}

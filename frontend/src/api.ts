@@ -134,4 +134,33 @@ export const departmentsAPI = {
     },
 };
 
+// Aggregation API
+export const aggregationAPI = {
+    aggregate: async (collectionName: string, aggregationConfig: {
+        match?: Record<string, any>;
+        groupBy?: string[];
+        groupFields?: Record<string, any>;
+        sort?: { field?: string; order?: 1 | -1 } | Record<string, 1 | -1>;
+        limit?: number;
+        project?: Record<string, any>;
+        lookup?: Array<{
+            from: string;
+            localField: string;
+            foreignField: string;
+            as?: string;
+        }>;
+    }): Promise<{ results: any[]; pipeline: any[] }> => {
+        const { data } = await API.post(`/dynamic/${collectionName}/aggregate`, aggregationConfig);
+        return data;
+    },
+    createIndex: async (collectionName: string, fields: string[] | Record<string, 1 | -1>[], options?: any): Promise<any> => {
+        const { data } = await API.post(`/dynamic/${collectionName}/index`, { fields, options });
+        return data;
+    },
+    getIndexes: async (collectionName: string): Promise<{ indexes: any[] }> => {
+        const { data } = await API.get(`/dynamic/${collectionName}/indexes`);
+        return data;
+    },
+};
+
 export default API;

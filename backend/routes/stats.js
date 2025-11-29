@@ -11,15 +11,12 @@ router.get('/dashboard', async (req, res) => {
             convictedCount,
             totalPeople,
             arrestsByLocationData,
-            crimeTypeData
+            crimeTypeData,
+            caseStatusData
         ] = await Promise.all([
-            // Case-insensitive match for active cases (Open, open, Under Investigation, etc.)
+            // Case-insensitive match for active cases (only Open)
             models.cases.countDocuments({ 
-                $or: [
-                    { status: { $regex: /^open$/i } },
-                    { status: { $regex: /under.*investigation/i } },
-                    { status: { $regex: /pending/i } }
-                ]
+                status: { $regex: /^open$/i }
             }),
             models.arrests.countDocuments(),
             // Case-insensitive match for closed cases
@@ -32,6 +29,9 @@ router.get('/dashboard', async (req, res) => {
             models.incidents.aggregate([
                 { $group: { _id: "$crimeType", count: { $sum: 1 } } },
                 { $limit: 5 } // Top 5 crime types
+            ]),
+            models.cases.aggregate([
+                { $group: { _id: "$status", count: { $sum: 1 } } }
             ])
         ]);
 
@@ -46,13 +46,31 @@ router.get('/dashboard', async (req, res) => {
             count: item.count
         }));
 
+        // Format case status distribution - normalize status names (only Open and Closed)
+        const caseStatusDistribution = caseStatusData.map(item => {
+            const status = item._id || 'Unknown';
+            // Normalize status names for better display - only Open and Closed
+            let normalizedStatus = status;
+            if (status.toLowerCase().includes('open')) {
+                normalizedStatus = 'Open';
+            } else if (status.toLowerCase().includes('closed')) {
+                normalizedStatus = 'Closed';
+            }
+            // Filter out any statuses that aren't Open or Closed
+            return {
+                status: normalizedStatus,
+                count: item.count
+            };
+        }).filter(item => item.status === 'Open' || item.status === 'Closed');
+
         res.json({
             activeCases,
             totalArrests,
             convictedCount,
             totalPeople,
             arrestsByLocation,
-            crimeTypeDistribution
+            crimeTypeDistribution,
+            caseStatusDistribution
         });
     } catch (err) {
         console.error('Dashboard stats error:', err);

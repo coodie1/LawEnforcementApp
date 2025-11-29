@@ -42,10 +42,12 @@ app.get('/', (req, res) => {
 const dynamicRouter = require('./routes/dynamic');
 const authRouter = require('./routes/auth');
 const statsRouter = require('./routes/stats');
+const arrestRouter = require('./routes/arrest');
 
 app.use('/api/dynamic', dynamicRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/arrest', arrestRouter);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port: ${PORT}`);

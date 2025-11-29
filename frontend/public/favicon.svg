@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" stop-opacity="1" />
+      <stop offset="100%" stop-color="#1e40af" stop-opacity="1" />
+    </linearGradient>
+    <linearGradient id="starGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="1" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Shield Background -->
+  <path d="M32 4 L12 10 L12 28 C12 40 20 50 32 56 C44 50 52 40 52 28 L52 10 Z" 
+        fill="url(#shieldGradient)" 
+        stroke="#1e3a8a" 
+        stroke-width="1.5"/>
+  
+  <!-- Star Badge -->
+  <path d="M32 20 L34.5 26 L41 27 L36 31.5 L37.5 38 L32 34.5 L26.5 38 L28 31.5 L23 27 L29.5 26 Z" 
+        fill="url(#starGradient)" 
+        stroke="#d97706" 
+        stroke-width="0.5"/>
+  
+  <!-- Horizontal Lines (Badge Detail) -->
+  <line x1="24" y1="38" x2="40" y2="38" stroke="#1e3a8a" stroke-width="1" opacity="0.6"/>
+  <line x1="26" y1="42" x2="38" y2="42" stroke="#1e3a8a" stroke-width="1" opacity="0.4"/>
+</svg>
+

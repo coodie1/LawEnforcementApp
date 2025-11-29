@@ -12,26 +12,28 @@ import { aggregationAPI } from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
 import { toast } from "sonner";
 
-const Departments = () => {
+const Locations = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [departments, setDepartments] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
+  const [selectedLocation, setSelectedLocation] = useState<any>(null);
   
   // Filter states
   const [cityFilter, setCityFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter options
-  const [cities, setCities] = useState<Array<{ id: string; city: string }>>([]);
+  const [cities, setCities] = useState<string[]>([]);
+  const [states, setStates] = useState<string[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
   useEffect(() => {
-    fetchDepartments();
+    fetchLocations();
     fetchFilterOptions();
-  }, [cityFilter]);
+  }, [cityFilter, stateFilter]);
 
   useEffect(() => {
     fetchFilterOptions();
@@ -41,17 +43,20 @@ const Departments = () => {
     try {
       setIsLoadingOptions(true);
       
-      // Fetch cities from locations
       const locationsResponse = await API.get('/dynamic/locations');
       const cityOptions = locationsResponse.data
         .filter((loc: any) => loc.city)
-        .map((loc: any) => ({
-          id: loc.locationID,
-          city: loc.city,
-        }))
-        .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.city === v.city) === i)
-        .sort((a: any, b: any) => a.city.localeCompare(b.city));
+        .map((loc: any) => loc.city)
+        .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i)
+        .sort();
       setCities(cityOptions);
+
+      const stateOptions = locationsResponse.data
+        .filter((loc: any) => loc.state)
+        .map((loc: any) => loc.state)
+        .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i)
+        .sort();
+      setStates(stateOptions);
     } catch (err) {
       console.error("Error fetching filter options:", err);
     } finally {
@@ -59,84 +64,80 @@ const Departments = () => {
     }
   };
 
-  const fetchDepartments = async () => {
+  const fetchLocations = async () => {
     try {
       setIsLoading(true);
       
       const match: Record<string, any> = {};
-      const lookup: any[] = [];
 
-      // City filter (via location lookup)
       if (cityFilter !== "all") {
-        lookup.push({
-          from: "locations",
-          localField: "locationID",
-          foreignField: "locationID",
-          as: "location"
-        });
-        match["location.city"] = cities.find(c => c.id === cityFilter)?.city;
+        match.city = cityFilter;
+      }
+
+      if (stateFilter !== "all") {
+        match.state = stateFilter;
       }
 
       let response;
-      if (Object.keys(match).length > 0 || lookup.length > 0) {
-        response = await aggregationAPI.aggregate("departments", {
+      if (Object.keys(match).length > 0) {
+        response = await aggregationAPI.aggregate("locations", {
           match,
-          lookup,
           limit: 500,
         });
-        setDepartments(response.results);
+        setLocations(response.results);
       } else {
-        response = await API.get('/dynamic/departments');
-      setDepartments(response.data);
+        response = await API.get('/dynamic/locations');
+        setLocations(response.data);
       }
       
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to load departments');
-      console.error('Error fetching departments:', err);
+      setError(err.response?.data || 'Failed to load locations');
+      console.error('Error fetching locations:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredDepartments = departments.filter((dept) => {
+  const filteredLocations = locations.filter((location) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
-      (dept.departmentID?.toLowerCase().includes(searchLower) || false) ||
-      (dept.name?.toLowerCase().includes(searchLower) || false) ||
-      (dept.locationID?.toLowerCase().includes(searchLower) || false) ||
-      (dept.location?.city?.toLowerCase().includes(searchLower) || false)
+      (location.locationID?.toLowerCase().includes(searchLower) || false) ||
+      (location.address?.toLowerCase().includes(searchLower) || false) ||
+      (location.city?.toLowerCase().includes(searchLower) || false) ||
+      (location.state?.toLowerCase().includes(searchLower) || false)
     );
   });
 
   const clearFilters = () => {
     setCityFilter("all");
+    setStateFilter("all");
     // useEffect will automatically trigger refetch when state changes
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-blue-200/60">
+      <div className="flex items-center justify-between pb-3 border-b border-amber-200/60">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-blue-700 to-indigo-700 bg-clip-text text-transparent">
-            Departments
+          <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent">
+            Locations
           </h2>
-          <p className="text-muted-foreground text-sm mt-0.5">Manage department information</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Manage location records</p>
         </div>
         <ShimmerButton 
-          background="linear-gradient(to right, #1e40af, #4338ca)"
+          background="linear-gradient(to right, #b45309, #c2410c)"
           shimmerColor="#ffffff"
           shimmerDuration="3s"
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedDepartment(null);
+            setSelectedLocation(null);
             setDialogOpen(true);
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
-          New Department
+          New Location
         </ShimmerButton>
       </div>
 
@@ -146,13 +147,13 @@ const Departments = () => {
             {/* Search and Filter Button */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                  placeholder="Search by Department Name or ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 text-sm"
-              />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by Location ID, Address, City, or State..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9 text-sm"
+                />
               </div>
               <Button
                 variant="outline"
@@ -183,21 +184,36 @@ const Departments = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   {/* City Filter */}
                   <Select value={cityFilter} onValueChange={setCityFilter} disabled={isLoadingOptions}>
-                    <SelectTrigger className="w-[200px] h-9 text-sm">
+                    <SelectTrigger className="w-[180px] h-9 text-sm">
                       <SelectValue placeholder="City" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Cities</SelectItem>
                       {cities.map((city) => (
-                        <SelectItem key={city.id} value={city.id}>
-                          {city.city}
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* State Filter */}
+                  <Select value={stateFilter} onValueChange={setStateFilter} disabled={isLoadingOptions}>
+                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                      <SelectValue placeholder="State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All States</SelectItem>
+                      {states.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
 
                   {/* Clear Filters Button */}
-                  {cityFilter !== "all" && (
+                  {(cityFilter !== "all" || stateFilter !== "all") && (
                     <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
                       <X className="h-4 w-4 mr-1" />
                       Clear
@@ -206,11 +222,18 @@ const Departments = () => {
                 </div>
 
                 {/* Active Filters Badges */}
-                {cityFilter !== "all" && (
+                {(cityFilter !== "all" || stateFilter !== "all") && (
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-                    <Badge variant="secondary" className="text-xs">
-                      City: {cities.find(c => c.id === cityFilter)?.city || cityFilter}
-                    </Badge>
+                    {cityFilter !== "all" && (
+                      <Badge variant="secondary" className="text-xs">
+                        City: {cityFilter}
+                      </Badge>
+                    )}
+                    {stateFilter !== "all" && (
+                      <Badge variant="secondary" className="text-xs">
+                        State: {stateFilter}
+                      </Badge>
+                    )}
                   </div>
                 )}
               </div>
@@ -222,37 +245,35 @@ const Departments = () => {
                 <div className="p-3 text-destructive text-sm bg-destructive/10">{error}</div>
               )}
               {isLoading ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">Loading departments...</div>
+                <div className="p-6 text-center text-muted-foreground text-sm">Loading locations...</div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Department ID</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Head Officer ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Address</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">City</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">State</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredDepartments.length === 0 ? (
+                    {filteredLocations.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground text-sm py-8">
-                          No departments found
+                          No locations found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredDepartments.map((dept) => (
+                      filteredLocations.map((location) => (
                         <TableRow 
-                          key={dept._id || dept.departmentID}
+                          key={location._id || location.locationID}
                           className="h-11 border-b border-border/30 hover:bg-muted/20 transition-colors"
                         >
-                          <TableCell className="font-medium text-sm py-2.5">{dept.departmentID || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5">{dept.name || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">
-                            {dept.location?.city || dept.locationID || 'N/A'}
-                          </TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">{dept.headOfficerID || 'N/A'}</TableCell>
+                          <TableCell className="font-medium text-sm py-2.5">{location.locationID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5">{location.address || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{location.city || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{location.state || 'N/A'}</TableCell>
                           <TableCell className="text-right py-2.5">
                             <div className="flex justify-end gap-1.5">
                               <Button 
@@ -260,7 +281,7 @@ const Departments = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-muted"
                                 onClick={() => {
-                                  setSelectedDepartment(dept);
+                                  setSelectedLocation(location);
                                   setDialogOpen(true);
                                 }}
                               >
@@ -271,13 +292,13 @@ const Departments = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete department ${dept.departmentID || dept._id}?`)) {
+                                  if (window.confirm(`Are you sure you want to delete location ${location.locationID || location._id}?`)) {
                                     try {
-                                      await API.delete(`/dynamic/departments/${dept._id}`);
-                                      toast.success("Department deleted successfully!");
-                                      fetchDepartments();
+                                      await API.delete(`/dynamic/locations/${location._id}`);
+                                      toast.success("Location deleted successfully!");
+                                      fetchLocations();
                                     } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete department");
+                                      toast.error(err.response?.data || "Failed to delete location");
                                     }
                                   }
                                 }}
@@ -300,13 +321,14 @@ const Departments = () => {
       <CollectionFormDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        collectionName="departments"
-        initialData={selectedDepartment}
-        onSuccess={fetchDepartments}
-        title="Departments"
+        collectionName="locations"
+        initialData={selectedLocation}
+        onSuccess={fetchLocations}
+        title="Locations"
       />
     </div>
   );
 };
 
-export default Departments;
+export default Locations;
+

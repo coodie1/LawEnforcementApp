@@ -23,21 +23,21 @@ function Calendar({
     nav: "absolute top-0 flex w-full justify-between z-10",
     button_previous: cn(
       buttonVariants({ variant: "ghost" }),
-      "size-9 text-muted-foreground/80 hover:text-foreground p-0",
+      "size-9 text-muted-foreground/80 hover:text-primary-foreground p-0 rounded-xl transition-all duration-200 hover:bg-primary hover:shadow-sm",
     ),
     button_next: cn(
       buttonVariants({ variant: "ghost" }),
-      "size-9 text-muted-foreground/80 hover:text-foreground p-0",
+      "size-9 text-muted-foreground/80 hover:text-primary-foreground p-0 rounded-xl transition-all duration-200 hover:bg-primary hover:shadow-sm",
     ),
     weekday: "size-9 p-0 text-xs font-medium text-muted-foreground/80",
     day_button:
-      "relative flex size-9 items-center justify-center whitespace-nowrap rounded-lg p-0 text-foreground outline-offset-2 group-[[data-selected]:not(.range-middle)]:[transition-property:color,background-color,border-radius,box-shadow] group-[[data-selected]:not(.range-middle)]:duration-150 focus:outline-none group-data-[disabled]:pointer-events-none focus-visible:z-10 hover:bg-accent group-data-[selected]:bg-primary hover:text-foreground group-data-[selected]:text-primary-foreground group-data-[disabled]:text-foreground/30 group-data-[disabled]:line-through group-data-[outside]:text-foreground/30 group-data-[outside]:group-data-[selected]:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 group-[.range-start:not(.range-end)]:rounded-e-none group-[.range-end:not(.range-start)]:rounded-s-none group-[.range-middle]:rounded-none group-data-[selected]:group-[.range-middle]:bg-accent group-data-[selected]:group-[.range-middle]:text-foreground",
+      "relative flex size-9 items-center justify-center whitespace-nowrap rounded-xl p-0 text-foreground outline-offset-2 transition-all duration-200 ease-in-out group-[[data-selected]:not(.range-middle)]:[transition-property:color,background-color,border-radius,box-shadow] group-[[data-selected]:not(.range-middle)]:duration-200 focus:outline-none group-data-[disabled]:pointer-events-none focus-visible:z-10 hover:bg-primary hover:shadow-sm hover:text-primary-foreground group-data-[selected]:bg-primary group-data-[selected]:shadow-md group-data-[selected]:text-primary-foreground group-data-[disabled]:text-foreground/30 group-data-[disabled]:line-through group-data-[outside]:text-foreground/30 group-data-[outside]:group-data-[selected]:text-primary-foreground group-data-[outside]:hover:bg-primary group-data-[outside]:hover:text-primary-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring/70 focus-visible:shadow-md group-[.range-start:not(.range-end)]:rounded-e-none group-[.range-end:not(.range-start)]:rounded-s-none group-[.range-middle]:rounded-none group-data-[selected]:group-[.range-middle]:bg-accent group-data-[selected]:group-[.range-middle]:text-foreground",
     day: "group size-9 px-0 text-sm",
     range_start: "range-start",
     range_end: "range-end",
     range_middle: "range-middle",
     today:
-      "*:after:pointer-events-none *:after:absolute *:after:bottom-1 *:after:start-1/2 *:after:z-10 *:after:size-[3px] *:after:-translate-x-1/2 *:after:rounded-full *:after:bg-primary [&[data-selected]:not(.range-middle)>*]:after:bg-background [&[data-disabled]>*]:after:bg-foreground/30 *:after:transition-colors",
+      "*:after:pointer-events-none *:after:absolute *:after:bottom-1 *:after:start-1/2 *:after:z-10 *:after:size-[3px] *:after:-translate-x-1/2 *:after:rounded-full *:after:bg-primary *:after:transition-all *:after:duration-200 [&[data-selected]:not(.range-middle)>*]:after:bg-background [&[data-disabled]>*]:after:bg-foreground/30",
     outside: "text-muted-foreground data-selected:bg-accent/50 data-selected:text-muted-foreground",
     hidden: "invisible",
     week_number: "size-9 p-0 text-xs font-medium text-muted-foreground/80",
@@ -73,7 +73,7 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("w-fit", className)}
+      className={cn("w-fit rounded-2xl bg-card/95 backdrop-blur-sm shadow-lg border border-border/50 p-4 transition-all duration-200", className)}
       classNames={mergedClassNames}
       components={mergedComponents}
       {...props}

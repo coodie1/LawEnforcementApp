@@ -36,10 +36,10 @@ function CalendarLume() {
   });
 
   return (
-    <div className="rounded-xl bg-background/80 backdrop-blur-md w-[380px]">
+    <div className="rounded-2xl bg-background/90 backdrop-blur-md shadow-xl border border-border/50 w-full max-w-[380px] mx-auto p-4 sm:p-6 transition-all duration-300 hover:shadow-2xl">
       {/* Header */}
-      <div className="flex justify-between items-center mb-3">
-        <h2 className="font-semibold text-lg">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <h2 className="font-semibold text-lg sm:text-xl">
           {step === "year" && "Select a Year"}
           {step === "month" && `Year ${selectedYear}`}
           {step === "day" && format(selectedDate ?? today, "MMMM yyyy")}
@@ -50,6 +50,7 @@ function CalendarLume() {
             variant={step === "year" ? "default" : "outline"}
             size="sm"
             onClick={() => setStep("year")}
+            className="rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
           >
             Year
           </Button>
@@ -58,6 +59,7 @@ function CalendarLume() {
             size="sm"
             onClick={() => setStep("month")}
             disabled={step === "year"} // can't go to month before selecting a year
+            className="rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
           >
             Month
           </Button>
@@ -70,10 +72,11 @@ function CalendarLume() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
             className="h-80"
           >
             <ScrollArea className="h-full">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3">
                 {yearRange.map((year) => (
                   <Button
                     key={year.getFullYear()}
@@ -81,7 +84,7 @@ function CalendarLume() {
                       year.getFullYear() === selectedYear ? "default" : "outline"
                     }
                     size="sm"
-                    className="h-10"
+                    className="h-10 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
                     onClick={() => {
                       setSelectedYear(year.getFullYear());
                       setStep("month");
@@ -101,7 +104,8 @@ function CalendarLume() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="grid grid-cols-3 gap-2"
+            transition={{ duration: 0.2 }}
+            className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3"
           >
             {eachMonthOfInterval({
               start: startOfYear(new Date(selectedYear, 0, 1)),
@@ -113,7 +117,7 @@ function CalendarLume() {
                   month.getMonth() === selectedMonth ? "default" : "outline"
                 }
                 size="sm"
-                className="h-12 flex flex-col"
+                className="h-12 flex flex-col rounded-xl transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105"
                 onClick={() => {
                   setSelectedMonth(month.getMonth());
                   setStep("day");
@@ -137,6 +141,8 @@ function CalendarLume() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="w-full"
           >
             <BaseCalendar
               mode="single"
@@ -147,7 +153,7 @@ function CalendarLume() {
                 setSelectedYear(date.getFullYear());
                 setSelectedMonth(date.getMonth());
               }}
-              className="rounded-lg border border-border bg-card mx-auto"
+              className="w-full mx-auto"
             />
           </motion.div>
         )}

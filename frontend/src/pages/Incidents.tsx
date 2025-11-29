@@ -12,33 +12,36 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
-import { ArrestRegistrationDialog } from "@/components/ArrestRegistrationDialog";
+import { CollectionFormDialog } from "@/components/CollectionFormDialog";
 import { toast } from "sonner";
 
-const Arrests = () => {
+const Incidents = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [arrests, setArrests] = useState<any[]>([]);
+  const [incidents, setIncidents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
-  const [selectedArrest, setSelectedArrest] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIncident, setSelectedIncident] = useState<any>(null);
   
   // Filter states
-  const [arrestDate, setArrestDate] = useState<Date | undefined>(undefined);
+  const [crimeTypeFilter, setCrimeTypeFilter] = useState<string>("all");
+  const [incidentDate, setIncidentDate] = useState<Date | undefined>(undefined);
   const [cityFilter, setCityFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const [officerFilter, setOfficerFilter] = useState<string>("all");
-  const [personNameFilter, setPersonNameFilter] = useState<string>("");
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter options
+  const [crimeTypes, setCrimeTypes] = useState<string[]>([]);
   const [cities, setCities] = useState<Array<{ id: string; city: string }>>([]);
+  const [states, setStates] = useState<string[]>([]);
   const [officers, setOfficers] = useState<Array<{ id: string; name: string }>>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
   useEffect(() => {
-    fetchArrests();
+    fetchIncidents();
     fetchFilterOptions();
-  }, [arrestDate, cityFilter, officerFilter, personNameFilter]);
+  }, [crimeTypeFilter, incidentDate, cityFilter, stateFilter, officerFilter]);
 
   useEffect(() => {
     fetchFilterOptions();
@@ -48,7 +51,18 @@ const Arrests = () => {
     try {
       setIsLoadingOptions(true);
       
-      // Fetch cities from locations
+      // Fetch unique crime types
+      const crimeTypesResponse = await API.post('/dynamic/incidents/aggregate', {
+        groupBy: ['crimeType'],
+        limit: 100,
+      });
+      setCrimeTypes(
+        crimeTypesResponse.data.results
+          .map((r: any) => r._id)
+          .filter((v: any) => v !== null && v !== undefined)
+      );
+
+      // Fetch locations
       const locationsResponse = await API.get('/dynamic/locations');
       const cityOptions = locationsResponse.data
         .filter((loc: any) => loc.city)
@@ -59,6 +73,13 @@ const Arrests = () => {
         .filter((v: any, i: number, a: any[]) => a.findIndex((t: any) => t.city === v.city) === i)
         .sort((a: any, b: any) => a.city.localeCompare(b.city));
       setCities(cityOptions);
+
+      const stateOptions = locationsResponse.data
+        .filter((loc: any) => loc.state)
+        .map((loc: any) => loc.state)
+        .filter((v: any, i: number, a: any[]) => a.indexOf(v) === i)
+        .sort();
+      setStates(stateOptions);
 
       // Fetch officers
       const officersResponse = await API.get('/dynamic/officers');
@@ -76,122 +97,115 @@ const Arrests = () => {
     }
   };
 
-  const fetchArrests = async () => {
+  const fetchIncidents = async () => {
     try {
       setIsLoading(true);
       
       const match: Record<string, any> = {};
       const lookup: any[] = [];
 
-      // Arrest date filter
-      if (arrestDate) {
-        const dateStr = `${arrestDate.getFullYear()}-${String(arrestDate.getMonth() + 1).padStart(2, '0')}-${String(arrestDate.getDate()).padStart(2, '0')}`;
+      // Crime type filter
+      if (crimeTypeFilter !== "all") {
+        match.crimeType = crimeTypeFilter;
+      }
+
+      // Incident date filter
+      if (incidentDate) {
+        const dateStr = `${incidentDate.getFullYear()}-${String(incidentDate.getMonth() + 1).padStart(2, '0')}-${String(incidentDate.getDate()).padStart(2, '0')}`;
         match.date = dateStr;
       }
 
-      // City filter (via location lookup)
-      if (cityFilter !== "all") {
+      // City/State filter (via location lookup)
+      if (cityFilter !== "all" || stateFilter !== "all") {
         lookup.push({
           from: "locations",
           localField: "locationID",
           foreignField: "locationID",
           as: "location"
         });
-      }
-
-      // Officer filter (via case lookup)
-      if (officerFilter !== "all" || personNameFilter) {
-        lookup.push({
-          from: "cases",
-          localField: "caseID",
-          foreignField: "caseID",
-          as: "case"
-        });
-      }
-
-      // Person name filter (via person lookup)
-      if (personNameFilter) {
-        lookup.push({
-          from: "people",
-          localField: "personID",
-          foreignField: "personID",
-          as: "person"
-        });
-      }
-
-      let response;
-      if (Object.keys(match).length > 0 || lookup.length > 0 || cityFilter !== "all" || officerFilter !== "all" || personNameFilter) {
-        // Use aggregation for filtered queries
         if (cityFilter !== "all") {
           match["location.city"] = cities.find(c => c.id === cityFilter)?.city;
         }
-        if (officerFilter !== "all") {
-          match["case.leadOfficerID"] = officerFilter;
+        if (stateFilter !== "all") {
+          match["location.state"] = stateFilter;
         }
-        if (personNameFilter) {
-          match["person.firstName"] = { $regex: personNameFilter, $options: "i" };
-        }
+      }
 
-        response = await aggregationAPI.aggregate("arrests", {
+      // Officer filter (via case lookup)
+      if (officerFilter !== "all") {
+        lookup.push({
+          from: "cases",
+          localField: "incidentID",
+          foreignField: "incidentID",
+          as: "case"
+        });
+        match["case.leadOfficerID"] = officerFilter;
+      }
+
+      let response;
+      if (Object.keys(match).length > 0 || lookup.length > 0) {
+        response = await aggregationAPI.aggregate("incidents", {
           match,
           lookup,
           limit: 500,
         });
-        setArrests(response.results);
+        setIncidents(response.results);
       } else {
-        response = await API.get('/dynamic/arrests');
-      setArrests(response.data);
+        response = await API.get('/dynamic/incidents');
+        setIncidents(response.data);
       }
       
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data || 'Failed to load arrests');
-      console.error('Error fetching arrests:', err);
+      setError(err.response?.data || 'Failed to load incidents');
+      console.error('Error fetching incidents:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredArrests = arrests.filter((arrest) => {
+  const filteredIncidents = incidents.filter((incident) => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
-      (arrest.arrestID?.toLowerCase().includes(searchLower) || false) ||
-      (arrest.personID?.toLowerCase().includes(searchLower) || false) ||
-      (arrest.caseID?.toLowerCase().includes(searchLower) || false) ||
-      (arrest.locationID?.toLowerCase().includes(searchLower) || false) ||
-      (arrest.person?.firstName?.toLowerCase().includes(searchLower) || false) ||
-      (arrest.person?.lastName?.toLowerCase().includes(searchLower) || false)
+      (incident.incidentID?.toLowerCase().includes(searchLower) || false) ||
+      (incident.title?.toLowerCase().includes(searchLower) || false) ||
+      (incident.crimeType?.toLowerCase().includes(searchLower) || false) ||
+      (incident.locationID?.toLowerCase().includes(searchLower) || false)
     );
   });
 
   const clearFilters = () => {
-    setArrestDate(undefined);
+    setCrimeTypeFilter("all");
+    setIncidentDate(undefined);
     setCityFilter("all");
+    setStateFilter("all");
     setOfficerFilter("all");
-    setPersonNameFilter("");
     // useEffect will automatically trigger refetch when state changes
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between pb-3 border-b border-red-200/60">
+      <div className="flex items-center justify-between pb-3 border-b border-amber-200/60">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
-            Arrests
+          <h2 className="text-2xl font-semibold tracking-tight bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            Incidents
           </h2>
-          <p className="text-muted-foreground text-sm mt-0.5">Track all arrest records</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Track and manage all incidents</p>
         </div>
         <ShimmerButton 
-          background="linear-gradient(to right, #dc2626, #ea580c)"
+          background="linear-gradient(to right, #d97706, #ea580c)"
           shimmerColor="#ffffff"
           shimmerDuration="3s"
           borderRadius="8px"
           className="shadow-md"
-          onClick={() => setRegisterDialogOpen(true)}
+          onClick={() => {
+            setSelectedIncident(null);
+            setDialogOpen(true);
+          }}
         >
           <Plus className="h-4 w-4 mr-2" />
-          New Arrest
+          New Incident
         </ShimmerButton>
       </div>
 
@@ -201,13 +215,13 @@ const Arrests = () => {
             {/* Search and Filter Button */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                  placeholder="Search by Arrest ID, Person ID, Case ID, or Person Name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 text-sm"
-              />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by Incident ID, Title, Crime Type..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-9 text-sm"
+                />
               </div>
               <Button
                 variant="outline"
@@ -236,16 +250,31 @@ const Arrests = () => {
             >
               <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Arrest Date */}
+                  {/* Crime Type Filter */}
+                  <Select value={crimeTypeFilter} onValueChange={setCrimeTypeFilter} disabled={isLoadingOptions}>
+                    <SelectTrigger className="w-[160px] h-9 text-sm">
+                      <SelectValue placeholder="Crime Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Crime Types</SelectItem>
+                      {crimeTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Incident Date */}
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-[180px] h-9 justify-start text-left font-normal text-sm">
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {arrestDate ? format(arrestDate, "MMM d, yyyy") : "Arrest Date"}
+                        {incidentDate ? format(incidentDate, "MMM d, yyyy") : "Incident Date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" side="bottom" align="start">
-                      <Calendar mode="single" selected={arrestDate} onSelect={setArrestDate} />
+                      <Calendar mode="single" selected={incidentDate} onSelect={setIncidentDate} />
                     </PopoverContent>
                   </Popover>
 
@@ -264,10 +293,25 @@ const Arrests = () => {
                     </SelectContent>
                   </Select>
 
+                  {/* State Filter */}
+                  <Select value={stateFilter} onValueChange={setStateFilter} disabled={isLoadingOptions}>
+                    <SelectTrigger className="w-[140px] h-9 text-sm">
+                      <SelectValue placeholder="State" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All States</SelectItem>
+                      {states.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
                   {/* Officer Filter */}
                   <Select value={officerFilter} onValueChange={setOfficerFilter} disabled={isLoadingOptions}>
                     <SelectTrigger className="w-[180px] h-9 text-sm">
-                      <SelectValue placeholder="Arresting Officer" />
+                      <SelectValue placeholder="Officer Involved" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Officers</SelectItem>
@@ -279,16 +323,8 @@ const Arrests = () => {
                     </SelectContent>
                   </Select>
 
-                  {/* Person Name Search */}
-                  <Input
-                    placeholder="Person Name..."
-                    value={personNameFilter}
-                    onChange={(e) => setPersonNameFilter(e.target.value)}
-                    className="w-[160px] h-9 text-sm"
-                  />
-
                   {/* Clear Filters Button */}
-                  {(arrestDate || cityFilter !== "all" || officerFilter !== "all" || personNameFilter) && (
+                  {(crimeTypeFilter !== "all" || incidentDate || cityFilter !== "all" || stateFilter !== "all" || officerFilter !== "all") && (
                     <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
                       <X className="h-4 w-4 mr-1" />
                       Clear
@@ -297,11 +333,16 @@ const Arrests = () => {
                 </div>
 
                 {/* Active Filters Badges */}
-                {(arrestDate || cityFilter !== "all" || officerFilter !== "all" || personNameFilter) && (
+                {(crimeTypeFilter !== "all" || incidentDate || cityFilter !== "all" || stateFilter !== "all" || officerFilter !== "all") && (
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
-                    {arrestDate && (
+                    {crimeTypeFilter !== "all" && (
                       <Badge variant="secondary" className="text-xs">
-                        Arrest Date: {format(arrestDate, "MMM d, yyyy")}
+                        Crime: {crimeTypeFilter}
+                      </Badge>
+                    )}
+                    {incidentDate && (
+                      <Badge variant="secondary" className="text-xs">
+                        Incident Date: {format(incidentDate, "MMM d, yyyy")}
                       </Badge>
                     )}
                     {cityFilter !== "all" && (
@@ -309,14 +350,14 @@ const Arrests = () => {
                         City: {cities.find(c => c.id === cityFilter)?.city || cityFilter}
                       </Badge>
                     )}
+                    {stateFilter !== "all" && (
+                      <Badge variant="secondary" className="text-xs">
+                        State: {stateFilter}
+                      </Badge>
+                    )}
                     {officerFilter !== "all" && (
                       <Badge variant="secondary" className="text-xs">
                         Officer: {officers.find(o => o.id === officerFilter)?.name || officerFilter}
-                      </Badge>
-                    )}
-                    {personNameFilter && (
-                      <Badge variant="secondary" className="text-xs">
-                        Person: {personNameFilter}
                       </Badge>
                     )}
                   </div>
@@ -330,39 +371,41 @@ const Arrests = () => {
                 <div className="p-3 text-destructive text-sm bg-destructive/10">{error}</div>
               )}
               {isLoading ? (
-                <div className="p-6 text-center text-muted-foreground text-sm">Loading arrests...</div>
+                <div className="p-6 text-center text-muted-foreground text-sm">Loading incidents...</div>
               ) : (
-              <Table>
-                <TableHeader>
+                <Table>
+                  <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Arrest ID</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Person ID</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Case ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Incident ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Title</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Crime Type</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</TableHead>
-                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location ID</TableHead>
+                      <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {filteredArrests.length === 0 ? (
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredIncidents.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground text-sm py-8">
-                          No arrests found
+                          No incidents found
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredArrests.map((arrest) => (
+                      filteredIncidents.map((incident) => (
                         <TableRow 
-                          key={arrest._id || arrest.arrestID}
+                          key={incident._id || incident.incidentID}
                           className="h-11 border-b border-border/30 hover:bg-muted/20 transition-colors"
                         >
-                          <TableCell className="font-medium text-sm py-2.5">{arrest.arrestID || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.personID || 'N/A'}</TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.caseID || 'N/A'}</TableCell>
+                          <TableCell className="font-medium text-sm py-2.5">{incident.incidentID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5">{incident.title || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">{incident.crimeType || 'N/A'}</TableCell>
                           <TableCell className="text-sm py-2.5 text-muted-foreground">
-                            {arrest.date ? new Date(arrest.date).toLocaleDateString() : 'N/A'}
+                            {incident.date ? new Date(incident.date).toLocaleDateString() : 'N/A'}
                           </TableCell>
-                          <TableCell className="text-sm py-2.5 text-muted-foreground">{arrest.locationID || 'N/A'}</TableCell>
+                          <TableCell className="text-sm py-2.5 text-muted-foreground">
+                            {incident.location?.city || incident.locationID || 'N/A'}
+                          </TableCell>
                           <TableCell className="text-right py-2.5">
                             <div className="flex justify-end gap-1.5">
                               <Button 
@@ -370,56 +413,53 @@ const Arrests = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-muted"
                                 onClick={() => {
-                                  setSelectedArrest(arrest);
-                                  setRegisterDialogOpen(true);
+                                  setSelectedIncident(incident);
+                                  setDialogOpen(true);
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
-                          </Button>
+                              </Button>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete arrest ${arrest.arrestID || arrest._id}?`)) {
+                                  if (window.confirm(`Are you sure you want to delete incident ${incident.incidentID || incident._id}?`)) {
                                     try {
-                                      await API.delete(`/dynamic/arrests/${arrest._id}`);
-                                      toast.success("Arrest deleted successfully!");
-                                      fetchArrests();
+                                      await API.delete(`/dynamic/incidents/${incident._id}`);
+                                      toast.success("Incident deleted successfully!");
+                                      fetchIncidents();
                                     } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete arrest");
+                                      toast.error(err.response?.data || "Failed to delete incident");
                                     }
                                   }
                                 }}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       ))
                     )}
-                </TableBody>
-              </Table>
+                  </TableBody>
+                </Table>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <ArrestRegistrationDialog
-        open={registerDialogOpen}
-        onOpenChange={(open) => {
-          setRegisterDialogOpen(open);
-          if (!open) {
-            setSelectedArrest(null);
-          }
-        }}
-        onSuccess={fetchArrests}
-        initialData={selectedArrest}
+      <CollectionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collectionName="incidents"
+        initialData={selectedIncident}
+        onSuccess={fetchIncidents}
+        title="Incidents"
       />
     </div>
   );
 };
 
-export default Arrests;
+export default Incidents;

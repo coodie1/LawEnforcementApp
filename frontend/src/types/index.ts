@@ -20,11 +20,12 @@ export interface StatsData {
     convictedCount: number;
     arrestsByLocation: Array<{ location: string; count: number }>;
     crimeTypeDistribution: Array<{ type: string; count: number }>;
+    caseStatusDistribution: Array<{ status: string; count: number }>;
 }
 
 export interface Case {
     caseID: string;
-    status: 'open' | 'closed' | 'under_investigation' | 'pending';
+    status: 'open' | 'closed';
     openingDate: string;
     closingDate?: string;
     description?: string;

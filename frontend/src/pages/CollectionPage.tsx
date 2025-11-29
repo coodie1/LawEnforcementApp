@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
+import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import API from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { InlineFilters } from "@/components/InlineFilters";
+import { aggregationAPI } from "@/api.ts";
 import { toast } from "sonner";
 
 interface CollectionPageProps {
@@ -34,26 +36,119 @@ const CollectionPage = ({
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [schemaFields, setSchemaFields] = useState<Array<{ name: string; type: string; required: boolean }>>([]);
+  const [filters, setFilters] = useState<Array<{ field: string; value: string | Date | null; type: "select" | "date" | "text" }>>([]);
+  const [uniqueValues, setUniqueValues] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
+    fetchSchema();
     fetchData();
   }, [collectionName]);
+
+  useEffect(() => {
+    // Fetch unique values for filterable fields
+    fetchUniqueValues();
+  }, [collectionName, schemaFields]);
+
+  const fetchSchema = async () => {
+    try {
+      const response = await API.get(`/dynamic/${collectionName.toLowerCase()}/schema`);
+      setSchemaFields(response.data);
+    } catch (err: any) {
+      console.error("Error fetching schema:", err);
+    }
+  };
+
+  const fetchUniqueValues = async () => {
+    try {
+      const filterableFields = schemaFields.filter(
+        (f) => f.type === "String" || f.name.toLowerCase().includes("status") || f.name.toLowerCase().includes("type")
+      );
+      
+      const values: Record<string, string[]> = {};
+      
+      for (const field of filterableFields.slice(0, 5)) { // Limit to first 5 fields to avoid too many requests
+        try {
+          const response = await aggregationAPI.aggregate(collectionName, {
+            groupBy: [field.name],
+            limit: 100,
+          });
+          values[field.name] = response.results
+            .map((r: any) => r._id)
+            .filter((v: any) => v !== null && v !== undefined)
+            .map((v: any) => String(v));
+        } catch (err) {
+          console.error(`Error fetching unique values for ${field.name}:`, err);
+        }
+      }
+      
+      setUniqueValues(values);
+    } catch (err) {
+      console.error("Error fetching unique values:", err);
+    }
+  };
 
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const response = await API.get(`/dynamic/${collectionName.toLowerCase()}`);
-      setData(response.data);
+      
+      // Build aggregation config from filters
+      const match: Record<string, any> = {};
+      
+      filters.forEach((filter) => {
+        if (filter.field && filter.value !== null) {
+          const field = schemaFields.find((f) => f.name === filter.field);
+          
+          if (filter.value instanceof Date) {
+            // Date filter - create date range for the selected date
+            const start = new Date(filter.value);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(filter.value);
+            end.setHours(23, 59, 59, 999);
+            match.dateRange = {
+              field: filter.field,
+              start: start.toISOString(),
+              end: end.toISOString(),
+            };
+          } else {
+            // String/Boolean filter
+            if (field?.type === "Boolean") {
+              match[filter.field] = filter.value === "true";
+            } else {
+              match[filter.field] = filter.value;
+            }
+          }
+        }
+      });
+
+      // If no filters, use regular GET endpoint
+      if (Object.keys(match).length === 0) {
+        const response = await API.get(`/dynamic/${collectionName.toLowerCase()}`);
+        setData(response.data);
+      } else {
+        // Use aggregation endpoint with match stage
+        const response = await aggregationAPI.aggregate(collectionName, {
+          match,
+          limit: 200,
+        });
+        setData(response.results);
+      }
+      
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data || `Failed to load ${title.toLowerCase()}`);
+      setError(err.response?.data?.error || err.response?.data || `Failed to load ${title.toLowerCase()}`);
       console.error(`Error fetching ${collectionName}:`, err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleApplyFilters = () => {
+    fetchData();
+  };
+
   const filteredData = data.filter((item) => {
+    if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return Object.values(item).some(value => 
       value !== null && 
@@ -182,14 +277,27 @@ const CollectionPage = ({
       <Card className="shadow-sm">
         <CardContent className="p-4">
           <div className="space-y-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder={`Search ${title.toLowerCase()}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-9 text-sm"
+            {/* Search and Filters */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder={`Search ${title.toLowerCase()}...`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-9 text-sm"
+                  />
+                </div>
+              </div>
+              
+              {/* Inline Filters */}
+              <InlineFilters
+                schemaFields={schemaFields}
+                filters={filters}
+                onFiltersChange={setFilters}
+                onApplyFilters={handleApplyFilters}
+                uniqueValues={uniqueValues}
               />
             </div>
 
