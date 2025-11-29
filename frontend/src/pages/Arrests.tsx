@@ -92,8 +92,8 @@ const Arrests = () => {
               {isLoading ? (
                 <div className="p-6 text-center text-muted-foreground text-sm">Loading arrests...</div>
               ) : (
-                <Table>
-                  <TableHeader>
+              <Table>
+                <TableHeader>
                     <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Arrest ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Person ID</TableHead>
@@ -101,9 +101,9 @@ const Arrests = () => {
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location ID</TableHead>
                       <TableHead className="h-10 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                     {filteredArrests.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground text-sm py-8">
@@ -135,7 +135,7 @@ const Arrests = () => {
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
-                              </Button>
+                          </Button>
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -153,14 +153,14 @@ const Arrests = () => {
                                 }}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                       ))
                     )}
-                  </TableBody>
-                </Table>
+                </TableBody>
+              </Table>
               )}
             </div>
           </div>

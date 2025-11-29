@@ -299,8 +299,8 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
         <BrowserRouter>
             <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-                <AuthProvider>
-                    <TooltipProvider>
+            <AuthProvider>
+                <TooltipProvider>
                         <ClickSpark
                             sparkColor="#ffffff"
                             sparkSize={8}
@@ -310,13 +310,13 @@ const App = () => (
                             easing="ease-out"
                         >
                             <div className="min-h-screen w-full">
-                                <Toaster />
-                                <Sonner />
-                                <AppRoutes />
+                    <Toaster />
+                    <Sonner />
+                    <AppRoutes />
                             </div>
                         </ClickSpark>
-                    </TooltipProvider>
-                </AuthProvider>
+                </TooltipProvider>
+            </AuthProvider>
             </ThemeProvider>
         </BrowserRouter>
     </QueryClientProvider>

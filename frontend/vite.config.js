@@ -10,6 +10,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-day-picker'],
+    force: true,
+  },
   server: {
     proxy: {
       '/api': {

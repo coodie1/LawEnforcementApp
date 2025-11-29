@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as React from "react";
 import {
   Dialog,
   DialogContent,
@@ -199,8 +200,59 @@ export function CollectionFormDialog({
               const fieldValue = formData[field.name] || "";
               const label = formatLabel(field.name);
 
-              if (field.type === "Date") {
-                const dateValue = fieldValue ? new Date(fieldValue) : undefined;
+              // Special handling for status field in cases collection
+              if (field.name === "status" && collectionName.toLowerCase() === "cases") {
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                    >
+                      <SelectTrigger id={field.name} className="w-full">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Open">Open</SelectItem>
+                        <SelectItem value="Closed">Closed</SelectItem>
+                        <SelectItem value="Under Investigation">Under Investigation</SelectItem>
+                        <SelectItem value="Pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              }
+
+              // Handle Date type fields and fields with "date" in the name (like openingDate)
+              if (field.type === "Date" || field.name.toLowerCase().includes("date")) {
+                let dateValue: Date | undefined;
+                try {
+                  if (fieldValue) {
+                    // Handle both Date objects and string dates (YYYY-MM-DD format)
+                    if (fieldValue instanceof Date) {
+                      dateValue = !isNaN(fieldValue.getTime()) ? fieldValue : undefined;
+                    } else if (typeof fieldValue === 'string' && fieldValue.trim() !== '') {
+                      // Handle YYYY-MM-DD format strings - parse in local time to avoid timezone issues
+                      const dateParts = fieldValue.trim().split('-');
+                      if (dateParts.length === 3) {
+                        const year = parseInt(dateParts[0], 10);
+                        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+                        const day = parseInt(dateParts[2], 10);
+                        const parsed = new Date(year, month, day);
+                        dateValue = !isNaN(parsed.getTime()) ? parsed : undefined;
+                      } else {
+                        // Fallback to standard parsing
+                        const parsed = new Date(fieldValue);
+                        dateValue = !isNaN(parsed.getTime()) ? parsed : undefined;
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error("Error parsing date:", error);
+                  dateValue = undefined;
+                }
                 const isValidDate = dateValue && !isNaN(dateValue.getTime());
                 
                 return (
@@ -212,28 +264,40 @@ export function CollectionFormDialog({
                       <PopoverTrigger asChild>
                         <Button
                           id={field.name}
+                          type="button"
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
                             !isValidDate && "text-muted-foreground"
                           )}
+                          disabled={isSubmitting}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {isValidDate ? format(dateValue, "PPP") : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 border-0 shadow-none bg-transparent" align="center" side="bottom" sideOffset={8}>
                         <Calendar
                           mode="single"
                           selected={isValidDate ? dateValue : undefined}
                           onSelect={(date) => {
-                            if (date) {
-                              handleChange(field.name, date.toISOString().split('T')[0]);
-                            } else {
-                              handleChange(field.name, null);
+                            try {
+                              if (date) {
+                                // Store as YYYY-MM-DD string format in local time (not UTC)
+                                // This prevents timezone issues where selecting a date might shift to previous day
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const dateString = `${year}-${month}-${day}`;
+                                handleChange(field.name, dateString);
+                              } else {
+                                handleChange(field.name, null);
+                              }
+                            } catch (error) {
+                              console.error("Error handling date selection:", error);
+                              toast.error("Failed to set date");
                             }
                           }}
-                          initialFocus
                         />
                       </PopoverContent>
                     </Popover>
