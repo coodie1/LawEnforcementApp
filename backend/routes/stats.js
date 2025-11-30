@@ -31,7 +31,28 @@ router.get('/dashboard', async (req, res) => {
                 { $limit: 5 } // Top 5 crime types
             ]),
             models.cases.aggregate([
-                { $group: { _id: "$status", count: { $sum: 1 } } }
+                // Normalize status to lowercase before grouping
+                {
+                    $project: {
+                        normalizedStatus: {
+                            $cond: {
+                                if: { $eq: [{ $toLower: "$status" }, "open"] },
+                                then: "open",
+                                else: {
+                                    $cond: {
+                                        if: { $eq: [{ $toLower: "$status" }, "closed"] },
+                                        then: "closed",
+                                        else: null
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                // Filter out null statuses (non-open/closed)
+                { $match: { normalizedStatus: { $ne: null } } },
+                // Group by normalized status
+                { $group: { _id: "$normalizedStatus", count: { $sum: 1 } } }
             ])
         ]);
 
@@ -46,17 +67,11 @@ router.get('/dashboard', async (req, res) => {
             count: item.count
         }));
 
-        // Format case status distribution - normalize status names (only Open and Closed)
+        // Format case status distribution - capitalize first letter
         const caseStatusDistribution = caseStatusData.map(item => {
             const status = item._id || 'Unknown';
-            // Normalize status names for better display - only Open and Closed
-            let normalizedStatus = status;
-            if (status.toLowerCase().includes('open')) {
-                normalizedStatus = 'Open';
-            } else if (status.toLowerCase().includes('closed')) {
-                normalizedStatus = 'Closed';
-            }
-            // Filter out any statuses that aren't Open or Closed
+            // Capitalize first letter: "open" -> "Open", "closed" -> "Closed"
+            const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
             return {
                 status: normalizedStatus,
                 count: item.count

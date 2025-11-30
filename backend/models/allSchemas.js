@@ -1,11 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// ==============================================================================
-//  DEFINE ALL 15 SCHEMAS
-// ==============================================================================
-// We use 'strict: false' for flexibility, so fields not defined here won't cause errors.
-// 'timestamps: true' automatically adds 'createdAt' and 'updatedAt' fields.
+
 
 const incidentSchema = new Schema({
     incidentID: { type: String, required: true, unique: true },
