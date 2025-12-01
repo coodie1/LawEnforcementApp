@@ -69,7 +69,16 @@ export function CollectionFormDialog({
         });
         setFormData(cleaned);
       } else {
-        setFormData({});
+        // For new records, auto-fill openingDate with today's date for cases
+        const newFormData: any = {};
+        if (collectionName.toLowerCase() === 'cases') {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          newFormData.openingDate = `${year}-${month}-${day}`;
+        }
+        setFormData(newFormData);
       }
       setError("");
     }
@@ -254,6 +263,40 @@ export function CollectionFormDialog({
                 }
                 const isValidDate = dateValue && !isNaN(dateValue.getTime());
                 
+                // Check if this is openingDate for a new case - make it read-only
+                const isOpeningDateNewCase = field.name.toLowerCase() === 'openingdate' && 
+                                             collectionName.toLowerCase() === 'cases' && 
+                                             !isEditMode;
+                
+                // Check if this is dateOfBirth - restrict to past dates only
+                const isDateOfBirth = field.name.toLowerCase() === 'dateofbirth' || 
+                                      field.name.toLowerCase() === 'dob';
+                
+                // If openingDate for new case, show as read-only input
+                if (isOpeningDateNewCase) {
+                  return (
+                    <div key={field.name} className="grid gap-2">
+                      <Label htmlFor={field.name}>
+                        {label} {field.required && <span className="text-destructive">*</span>}
+                      </Label>
+                      <Input
+                        id={field.name}
+                        type="text"
+                        value={isValidDate ? format(dateValue, "PPP") : ""}
+                        readOnly
+                        disabled
+                        className="bg-muted cursor-not-allowed"
+                      />
+                      {/* Hidden input for form validation */}
+                      <input
+                        type="hidden"
+                        value={isValidDate ? dateValue.toISOString().split('T')[0] : ""}
+                        required={field.required}
+                      />
+                    </div>
+                  );
+                }
+                
                 return (
                   <div key={field.name} className="grid gap-2">
                     <Label htmlFor={field.name}>
@@ -279,6 +322,9 @@ export function CollectionFormDialog({
                         <Calendar
                           mode="single"
                           selected={isValidDate ? dateValue : undefined}
+                          disabled={isDateOfBirth ? { after: new Date() } : undefined}
+                          maxDate={isDateOfBirth ? new Date() : undefined}
+                          disableFutureNavigation={isDateOfBirth}
                           onSelect={(date) => {
                             try {
                               if (date) {

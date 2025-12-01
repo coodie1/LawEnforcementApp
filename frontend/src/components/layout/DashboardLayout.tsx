@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { ExpandableSidebar, useExpandableSidebar } from "@/components/ui/expandable-sidebar";
+import { UserProfilePopover } from "@/components/UserProfilePopover";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -19,6 +20,9 @@ const MainContent = ({ children }: { children: ReactNode }) => {
             <h1 className="text-xl font-semibold" style={{ color: '#0b2c75' }}>
               Crime & Law Enforcement System
             </h1>
+            </div>
+            <div className="flex items-center">
+              <UserProfilePopover />
             </div>
           </header>
 

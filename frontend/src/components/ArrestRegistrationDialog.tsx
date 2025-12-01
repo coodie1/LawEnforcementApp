@@ -6,10 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import API from "@/api.ts";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -32,7 +30,6 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
   const [personID, setPersonID] = useState("");
   const [caseID, setCaseID] = useState("");
   const [arrestDate, setArrestDate] = useState<Date>(new Date());
-  const [calendarOpen, setCalendarOpen] = useState(false);
   const [locationID, setLocationID] = useState("");
   const [chargeDescription, setChargeDescription] = useState("");
   const [statuteCode, setStatuteCode] = useState("");
@@ -284,23 +281,14 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
           {/* Arrest Date */}
           <div className="space-y-2">
             <Label htmlFor="arrestDate">Arrest Date <span className="text-destructive">*</span></Label>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !arrestDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {arrestDate ? format(arrestDate, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" side="bottom" align="start">
-                <Calendar mode="single" selected={arrestDate} onSelect={(date) => { if (date) { setArrestDate(date); setCalendarOpen(false); } }} />
-              </PopoverContent>
-            </Popover>
+            <Input
+              id="arrestDate"
+              type="text"
+              value={format(arrestDate, "PPP")}
+              readOnly
+              disabled
+              className="bg-muted cursor-not-allowed"
+            />
           </div>
 
           {/* Location Dropdown */}

@@ -32,6 +32,15 @@ export const authAPI = {
         const { data } = await API.post('/auth/register', userData);
         return data;
     },
+    updateProfile: async (userData: {
+        username?: string;
+        password?: string;
+        firstName?: string;
+        lastName?: string;
+    }): Promise<{ user: User }> => {
+        const { data } = await API.put('/auth/profile', userData);
+        return data;
+    },
 };
 
 // Stats API

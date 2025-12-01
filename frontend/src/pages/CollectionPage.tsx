@@ -123,8 +123,8 @@ const CollectionPage = ({
 
       // If no filters, use regular GET endpoint
       if (Object.keys(match).length === 0) {
-        const response = await API.get(`/dynamic/${collectionName.toLowerCase()}`);
-        setData(response.data);
+      const response = await API.get(`/dynamic/${collectionName.toLowerCase()}`);
+      setData(response.data);
       } else {
         // Use aggregation endpoint with match stage
         const response = await aggregationAPI.aggregate(collectionName, {
@@ -281,12 +281,12 @@ const CollectionPage = ({
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder={`Search ${title.toLowerCase()}...`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-9 text-sm"
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={`Search ${title.toLowerCase()}...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9 text-sm"
                   />
                 </div>
               </div>
@@ -348,7 +348,7 @@ const CollectionPage = ({
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 text-green-600"
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
                                   setSelectedItem(item);
                                   setDialogOpen(true);
