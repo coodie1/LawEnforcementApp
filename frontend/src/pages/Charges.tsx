@@ -265,7 +265,7 @@ const Charges = () => {
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                className="h-8 w-8 p-0 hover:bg-muted"
+                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600 text-green-600"
                                 onClick={() => {
                                   setSelectedCharge(charge);
                                   setDialogOpen(true);
