@@ -21,6 +21,7 @@ const Cases = () => {
   const [crimeTypeFilter, setCrimeTypeFilter] = useState<string>("all");
   const [locationFilter, setLocationFilter] = useState<string>("all");
   const [openingDate, setOpeningDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [cases, setCases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -278,7 +279,7 @@ const Cases = () => {
               </Select>
 
               {/* Opening Date Filter */}
-              <Popover>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-[180px] h-9 justify-start text-left font-normal text-sm">
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -286,7 +287,7 @@ const Cases = () => {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" side="bottom" align="start">
-                  <Calendar mode="single" selected={openingDate} onSelect={setOpeningDate} />
+                  <Calendar mode="single" selected={openingDate} onSelect={(date) => { setOpeningDate(date); setCalendarOpen(false); }} />
                 </PopoverContent>
               </Popover>
 

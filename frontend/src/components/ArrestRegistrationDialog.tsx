@@ -32,6 +32,7 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
   const [personID, setPersonID] = useState("");
   const [caseID, setCaseID] = useState("");
   const [arrestDate, setArrestDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [locationID, setLocationID] = useState("");
   const [chargeDescription, setChargeDescription] = useState("");
   const [statuteCode, setStatuteCode] = useState("");
@@ -283,7 +284,7 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
           {/* Arrest Date */}
           <div className="space-y-2">
             <Label htmlFor="arrestDate">Arrest Date <span className="text-destructive">*</span></Label>
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -297,7 +298,7 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" side="bottom" align="start">
-                <Calendar mode="single" selected={arrestDate} onSelect={(date) => date && setArrestDate(date)} />
+                <Calendar mode="single" selected={arrestDate} onSelect={(date) => { if (date) { setArrestDate(date); setCalendarOpen(false); } }} />
               </PopoverContent>
             </Popover>
           </div>

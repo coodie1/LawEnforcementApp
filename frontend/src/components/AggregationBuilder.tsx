@@ -46,6 +46,8 @@ export function AggregationBuilder({
     start: undefined,
     end: undefined,
   });
+  const [startCalendarOpen, setStartCalendarOpen] = useState(false);
+  const [endCalendarOpen, setEndCalendarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const [pipeline, setPipeline] = useState<any[]>([]);
@@ -215,7 +217,7 @@ export function AggregationBuilder({
               </Select>
               {dateRange.field && (
                 <>
-                  <Popover>
+                  <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -223,10 +225,10 @@ export function AggregationBuilder({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={dateRange.start} onSelect={(date) => setDateRange({ ...dateRange, start: date })} />
+                      <Calendar mode="single" selected={dateRange.start} onSelect={(date) => { setDateRange({ ...dateRange, start: date }); setStartCalendarOpen(false); }} />
                     </PopoverContent>
                   </Popover>
-                  <Popover>
+                  <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -234,7 +236,7 @@ export function AggregationBuilder({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar mode="single" selected={dateRange.end} onSelect={(date) => setDateRange({ ...dateRange, end: date })} />
+                      <Calendar mode="single" selected={dateRange.end} onSelect={(date) => { setDateRange({ ...dateRange, end: date }); setEndCalendarOpen(false); }} />
                     </PopoverContent>
                   </Popover>
                 </>

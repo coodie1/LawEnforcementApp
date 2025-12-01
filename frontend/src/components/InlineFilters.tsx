@@ -31,6 +31,7 @@ export function InlineFilters({
   uniqueValues = {},
 }: InlineFiltersProps) {
   const [activeFilters, setActiveFilters] = useState<FilterOption[]>(filters);
+  const [calendarOpen, setCalendarOpen] = useState<Record<number, boolean>>({});
 
   // Get filterable fields (String, Date, Boolean types)
   const filterableFields = schemaFields.filter(
@@ -104,7 +105,7 @@ export function InlineFilters({
             </Select>
 
             {fieldType === "date" ? (
-              <Popover>
+              <Popover open={calendarOpen[index] || false} onOpenChange={(open) => setCalendarOpen({ ...calendarOpen, [index]: open })}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -121,7 +122,7 @@ export function InlineFilters({
                   <Calendar
                     mode="single"
                     selected={filter.value as Date | undefined}
-                    onSelect={(date) => updateFilter(index, { value: date || null })}
+                    onSelect={(date) => { updateFilter(index, { value: date || null }); setCalendarOpen({ ...calendarOpen, [index]: false }); }}
                   />
                 </PopoverContent>
               </Popover>

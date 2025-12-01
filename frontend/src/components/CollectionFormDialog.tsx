@@ -50,6 +50,7 @@ export function CollectionFormDialog({
   const [isLoadingSchema, setIsLoadingSchema] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
+  const [calendarOpen, setCalendarOpen] = useState<Record<string, boolean>>({});
 
   const isEditMode = !!initialData?._id;
 
@@ -258,7 +259,7 @@ export function CollectionFormDialog({
                     <Label htmlFor={field.name}>
                       {label} {field.required && <span className="text-destructive">*</span>}
                     </Label>
-                    <Popover>
+                    <Popover open={calendarOpen[field.name] || false} onOpenChange={(open) => setCalendarOpen({ ...calendarOpen, [field.name]: open })}>
                       <PopoverTrigger asChild>
                         <Button
                           id={field.name}
@@ -288,8 +289,10 @@ export function CollectionFormDialog({
                                 const day = String(date.getDate()).padStart(2, '0');
                                 const dateString = `${year}-${month}-${day}`;
                                 handleChange(field.name, dateString);
+                                setCalendarOpen({ ...calendarOpen, [field.name]: false });
                               } else {
                                 handleChange(field.name, null);
+                                setCalendarOpen({ ...calendarOpen, [field.name]: false });
                               }
                             } catch (error) {
                               console.error("Error handling date selection:", error);

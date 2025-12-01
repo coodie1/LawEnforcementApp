@@ -26,6 +26,7 @@ const Incidents = () => {
   // Filter states
   const [crimeTypeFilter, setCrimeTypeFilter] = useState<string>("all");
   const [incidentDate, setIncidentDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [officerFilter, setOfficerFilter] = useState<string>("all");
@@ -266,7 +267,7 @@ const Incidents = () => {
                   </Select>
 
                   {/* Incident Date */}
-                  <Popover>
+                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-[180px] h-9 justify-start text-left font-normal text-sm">
                         <CalendarIcon className="mr-2 h-4 w-4" />
@@ -274,7 +275,7 @@ const Incidents = () => {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" side="bottom" align="start">
-                      <Calendar mode="single" selected={incidentDate} onSelect={setIncidentDate} />
+                      <Calendar mode="single" selected={incidentDate} onSelect={(date) => { setIncidentDate(date); setCalendarOpen(false); }} />
                     </PopoverContent>
                   </Popover>
 
