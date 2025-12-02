@@ -14,7 +14,9 @@ import {
   Car,
   Swords,
   AlertTriangle,
-  LogOut
+  LogOut,
+  UserCog,
+  UserPlus
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "react-router-dom";
@@ -77,12 +79,25 @@ const SidebarContent = () => {
   const { open } = useExpandableSidebar();
   const { logout, user } = useAuth();
   const location = useLocation();
+  const isAdmin = user?.role === 'admin';
+  const isOfficer = user?.role === 'officer' || isAdmin;
+  const isAnalyst = user?.role === 'analyst';
 
   const handleLogout = () => {
     logout();
   };
 
-  const links = menuItems.map(item => {
+  // Filter menu items based on role
+  const filteredMenuItems = menuItems.filter(item => {
+    // Analyst can only see Dashboard
+    if (isAnalyst) {
+      return item.url === "/";
+    }
+    // Officer and Admin can see all items
+    return true;
+  });
+
+  const links = filteredMenuItems.map(item => {
     const isActive = location.pathname === item.url || (item.url !== "/" && location.pathname.startsWith(item.url));
     return {
       label: item.title,
@@ -99,6 +114,38 @@ const SidebarContent = () => {
       ),
     };
   });
+
+  // User Management links (Admin only)
+  const userManagementLinks = isAdmin ? [
+    {
+      label: "All Users",
+      href: "/admin/users",
+      icon: (
+        <UserCog 
+          className={cn(
+            "h-5 w-5 flex-shrink-0 transition-colors min-w-[20px]",
+            (location.pathname === "/admin/users" || location.pathname.startsWith("/admin/users"))
+              ? "text-white"
+              : "text-white/100"
+          )}
+        />
+      ),
+    },
+    {
+      label: "Add User",
+      href: "/admin/users/create",
+      icon: (
+        <UserPlus 
+          className={cn(
+            "h-5 w-5 flex-shrink-0 transition-colors min-w-[20px]",
+            location.pathname === "/admin/users/create"
+              ? "text-white"
+              : "text-white/100"
+          )}
+        />
+      ),
+    },
+  ] : [];
 
   return (
     <>
@@ -127,6 +174,35 @@ const SidebarContent = () => {
                 />
               );
             })}
+
+            {/* User Management Section (Admin only) */}
+            {isAdmin && userManagementLinks.length > 0 && (
+              <>
+                <div className={cn("mt-4 pt-4 border-t border-white/10", open ? "px-3" : "px-2")}>
+                  {open && (
+                    <div className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2">
+                      User Management
+                    </div>
+                  )}
+                </div>
+                {userManagementLinks.map((link, idx) => {
+                  const isActive = location.pathname === link.href || (link.href !== "/" && location.pathname.startsWith(link.href));
+                  return (
+                    <SidebarLink
+                      key={`user-mgmt-${idx}`}
+                      link={link}
+                      className={cn(
+                        "rounded-lg py-2.5 transition-all duration-200 flex-shrink-0",
+                        open ? "px-3" : "px-2",
+                        isActive
+                          ? "bg-white/25 text-white shadow-sm border-l-4 border-white/50"
+                          : "text-white/80 hover:bg-white/15 hover:text-white"
+                      )}
+                    />
+                  );
+                })}
+              </>
+            )}
           </div>
         </div>
 

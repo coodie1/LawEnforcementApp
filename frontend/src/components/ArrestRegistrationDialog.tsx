@@ -25,6 +25,9 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>("arrestee");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   // Form fields
   const [personID, setPersonID] = useState("");
@@ -67,6 +70,9 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
       }
       setCurrentStep("arrestee");
       setError(null);
+      setFieldErrors({});
+      setTouchedFields({});
+      setSubmitAttempted(false);
     }
   }, [open, initialData]);
 
@@ -109,10 +115,132 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
   };
 
 
+  const validateField = (fieldName: string, value: any): string => {
+    switch (fieldName) {
+      case "personID":
+        return !value ? "This field is required" : "";
+      case "caseID":
+        return !value ? "This field is required" : "";
+      case "arrestDate":
+        return !value ? "This field is required" : "";
+      case "locationID":
+        return !value ? "This field is required" : "";
+      case "chargeDescription":
+        return !value || value.trim() === "" ? "This field is required" : "";
+      case "statuteCode":
+        return !value || value.trim() === "" ? "This field is required" : "";
+      default:
+        return "";
+    }
+  };
+
+  const validateAllFields = (): boolean => {
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    const fields = [
+      { name: "personID", value: personID },
+      { name: "caseID", value: caseID },
+      { name: "arrestDate", value: arrestDate },
+      { name: "locationID", value: locationID },
+      { name: "chargeDescription", value: chargeDescription },
+      { name: "statuteCode", value: statuteCode },
+    ];
+
+    fields.forEach((field) => {
+      const error = validateField(field.name, field.value);
+      if (error) {
+        errors[field.name] = error;
+        isValid = false;
+      }
+    });
+
+    setFieldErrors(errors);
+    setSubmitAttempted(true);
+    
+    // Mark all fields as touched
+    const allTouched: Record<string, boolean> = {};
+    fields.forEach((field) => {
+      allTouched[field.name] = true;
+    });
+    setTouchedFields(allTouched);
+
+    return isValid;
+  };
+
+  const handleFieldChange = (fieldName: string, value: any) => {
+    // Update the appropriate state
+    switch (fieldName) {
+      case "personID":
+        setPersonID(value);
+        break;
+      case "caseID":
+        setCaseID(value);
+        break;
+      case "locationID":
+        setLocationID(value);
+        break;
+      case "chargeDescription":
+        setChargeDescription(value);
+        break;
+      case "statuteCode":
+        setStatuteCode(value);
+        break;
+    }
+
+    // Clear error for this field when user starts typing
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleFieldBlur = (fieldName: string) => {
+    setTouchedFields((prev) => ({ ...prev, [fieldName]: true }));
+    
+    let value: any;
+    switch (fieldName) {
+      case "personID":
+        value = personID;
+        break;
+      case "caseID":
+        value = caseID;
+        break;
+      case "arrestDate":
+        value = arrestDate;
+        break;
+      case "locationID":
+        value = locationID;
+        break;
+      case "chargeDescription":
+        value = chargeDescription;
+        break;
+      case "statuteCode":
+        value = statuteCode;
+        break;
+      default:
+        return;
+    }
+    
+    const error = validateField(fieldName, value);
+    setFieldErrors((prev) => {
+      if (error) {
+        return { ...prev, [fieldName]: error };
+      } else {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      }
+    });
+  };
+
   const handleSubmit = async () => {
-    // Validate
-    if (!personID || !caseID || !arrestDate || !locationID || !chargeDescription || !statuteCode) {
-      setError("Please fill in all required fields");
+    // Validate all fields
+    if (!validateAllFields()) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -140,6 +268,9 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
         setTimeout(() => {
           onSuccess();
           onOpenChange(false);
+          setFieldErrors({});
+          setTouchedFields({});
+          setSubmitAttempted(false);
           toast.success("Arrest successfully registered!");
         }, 1000);
       } else {
@@ -247,8 +378,17 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
           {/* Person Dropdown */}
           <div className="space-y-2">
             <Label htmlFor="person">Person <span className="text-destructive">*</span></Label>
-            <Select value={personID} onValueChange={setPersonID} disabled={isLoadingOptions}>
-              <SelectTrigger>
+            <Select 
+              value={personID} 
+              onValueChange={(value) => handleFieldChange("personID", value)}
+              onOpenChange={(open) => {
+                if (!open) {
+                  handleFieldBlur("personID");
+                }
+              }}
+              disabled={isLoadingOptions}
+            >
+              <SelectTrigger className={cn(fieldErrors.personID && "border-destructive focus:border-destructive focus:ring-destructive")}>
                 <SelectValue placeholder="Select a person..." />
               </SelectTrigger>
               <SelectContent>
@@ -259,13 +399,25 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
                 ))}
               </SelectContent>
             </Select>
+            {(submitAttempted || touchedFields.personID) && fieldErrors.personID && (
+              <p className="text-sm text-destructive mt-1">{fieldErrors.personID}</p>
+            )}
           </div>
 
           {/* Case Dropdown */}
           <div className="space-y-2">
             <Label htmlFor="case">Case <span className="text-destructive">*</span></Label>
-            <Select value={caseID} onValueChange={setCaseID} disabled={isLoadingOptions}>
-              <SelectTrigger>
+            <Select 
+              value={caseID} 
+              onValueChange={(value) => handleFieldChange("caseID", value)}
+              onOpenChange={(open) => {
+                if (!open) {
+                  handleFieldBlur("caseID");
+                }
+              }}
+              disabled={isLoadingOptions}
+            >
+              <SelectTrigger className={cn(fieldErrors.caseID && "border-destructive focus:border-destructive focus:ring-destructive")}>
                 <SelectValue placeholder="Select an open case..." />
               </SelectTrigger>
               <SelectContent>
@@ -276,6 +428,9 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
                 ))}
               </SelectContent>
             </Select>
+            {(submitAttempted || touchedFields.caseID) && fieldErrors.caseID && (
+              <p className="text-sm text-destructive mt-1">{fieldErrors.caseID}</p>
+            )}
           </div>
 
           {/* Arrest Date */}
@@ -294,8 +449,17 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
           {/* Location Dropdown */}
           <div className="space-y-2">
             <Label htmlFor="location">Location <span className="text-destructive">*</span></Label>
-            <Select value={locationID} onValueChange={setLocationID} disabled={isLoadingOptions}>
-              <SelectTrigger>
+            <Select 
+              value={locationID} 
+              onValueChange={(value) => handleFieldChange("locationID", value)}
+              onOpenChange={(open) => {
+                if (!open) {
+                  handleFieldBlur("locationID");
+                }
+              }}
+              disabled={isLoadingOptions}
+            >
+              <SelectTrigger className={cn(fieldErrors.locationID && "border-destructive focus:border-destructive focus:ring-destructive")}>
                 <SelectValue placeholder="Select a location..." />
               </SelectTrigger>
               <SelectContent>
@@ -306,6 +470,9 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
                 ))}
               </SelectContent>
             </Select>
+            {(submitAttempted || touchedFields.locationID) && fieldErrors.locationID && (
+              <p className="text-sm text-destructive mt-1">{fieldErrors.locationID}</p>
+            )}
           </div>
 
           {/* Charge Description */}
@@ -315,9 +482,14 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
               id="chargeDescription"
               placeholder="Enter charge description..."
               value={chargeDescription}
-              onChange={(e) => setChargeDescription(e.target.value)}
+              onChange={(e) => handleFieldChange("chargeDescription", e.target.value)}
+              onBlur={() => handleFieldBlur("chargeDescription")}
               rows={4}
+              className={cn(fieldErrors.chargeDescription && "border-destructive focus:border-destructive focus:ring-destructive")}
             />
+            {(submitAttempted || touchedFields.chargeDescription) && fieldErrors.chargeDescription && (
+              <p className="text-sm text-destructive mt-1">{fieldErrors.chargeDescription}</p>
+            )}
           </div>
 
           {/* Statute Code */}
@@ -327,8 +499,13 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
               id="statuteCode"
               placeholder="Enter statute code..."
               value={statuteCode}
-              onChange={(e) => setStatuteCode(e.target.value)}
+              onChange={(e) => handleFieldChange("statuteCode", e.target.value)}
+              onBlur={() => handleFieldBlur("statuteCode")}
+              className={cn(fieldErrors.statuteCode && "border-destructive focus:border-destructive focus:ring-destructive")}
             />
+            {(submitAttempted || touchedFields.statuteCode) && fieldErrors.statuteCode && (
+              <p className="text-sm text-destructive mt-1">{fieldErrors.statuteCode}</p>
+            )}
           </div>
 
           {/* Convicted Checkbox */}

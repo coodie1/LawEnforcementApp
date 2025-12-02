@@ -76,13 +76,25 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
+// Login - Support both email and username for backward compatibility
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { email, username, password } = req.body;
 
-        // Check user
-        const user = await User.findOne({ username });
+        if (!password) {
+            return res.status(400).json({ message: 'Password is required' });
+        }
+
+        // Support both email and username login
+        let user;
+        if (email) {
+            user = await User.findOne({ email });
+        } else if (username) {
+            user = await User.findOne({ username });
+        } else {
+            return res.status(400).json({ message: 'Email or username is required' });
+        }
+
         if (!user) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
@@ -95,7 +107,7 @@ router.post('/login', async (req, res) => {
 
         // Create token
         const token = jwt.sign(
-            { id: user._id, username: user.username, role: user.role },
+            { id: user._id, email: user.email, role: user.role },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
@@ -104,10 +116,12 @@ router.post('/login', async (req, res) => {
             token,
             user: {
                 id: user._id,
+                email: user.email,
                 username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                role: user.role
+                role: user.role,
+                temporaryPassword: user.temporaryPassword
             }
         });
     } catch (err) {
@@ -168,3 +182,4 @@ router.put('/profile', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.authenticateToken = authenticateToken;

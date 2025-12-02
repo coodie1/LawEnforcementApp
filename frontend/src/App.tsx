@@ -26,6 +26,10 @@ import CollectionPage from "./pages/CollectionPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ClickSpark from "@/components/ClickSpark";
+import UserList from "./pages/UserList";
+import CreateUserForm from "./pages/CreateUserForm";
+import EditUserForm from "./pages/EditUserForm";
+import { RequireAdmin, RequireRole } from "./components/RequireRole";
 
 const queryClient = new QueryClient();
 
@@ -67,9 +71,11 @@ const AppRoutes = () => {
                 path="/cases"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Cases />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Cases />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -77,9 +83,11 @@ const AppRoutes = () => {
                 path="/arrests"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Arrests />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Arrests />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -147,9 +155,11 @@ const AppRoutes = () => {
                 path="/evidence"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Evidence />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Evidence />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -157,9 +167,11 @@ const AppRoutes = () => {
                 path="/forensics"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Forensics />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Forensics />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -167,9 +179,11 @@ const AppRoutes = () => {
                 path="/reports"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Reports />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Reports />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -177,9 +191,11 @@ const AppRoutes = () => {
                 path="/prisons"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Prisons />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Prisons />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -187,9 +203,11 @@ const AppRoutes = () => {
                 path="/sentences"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Sentences />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Sentences />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -197,9 +215,11 @@ const AppRoutes = () => {
                 path="/vehicles"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Vehicles />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Vehicles />
+                            </DashboardLayout>
+                        </RequireRole>
                     </ProtectedRoute>
                 }
             />
@@ -207,9 +227,48 @@ const AppRoutes = () => {
                 path="/weapons"
                 element={
                     <ProtectedRoute>
-                        <DashboardLayout>
-                            <Weapons />
-                        </DashboardLayout>
+                        <RequireRole allowedRoles={['admin', 'officer']}>
+                            <DashboardLayout>
+                                <Weapons />
+                            </DashboardLayout>
+                        </RequireRole>
+                    </ProtectedRoute>
+                }
+            />
+            {/* Admin-only routes */}
+            <Route
+                path="/admin/users"
+                element={
+                    <ProtectedRoute>
+                        <RequireAdmin>
+                            <DashboardLayout>
+                                <UserList />
+                            </DashboardLayout>
+                        </RequireAdmin>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/admin/users/create"
+                element={
+                    <ProtectedRoute>
+                        <RequireAdmin>
+                            <DashboardLayout>
+                                <CreateUserForm />
+                            </DashboardLayout>
+                        </RequireAdmin>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/admin/users/edit/:id"
+                element={
+                    <ProtectedRoute>
+                        <RequireAdmin>
+                            <DashboardLayout>
+                                <EditUserForm />
+                            </DashboardLayout>
+                        </RequireAdmin>
                     </ProtectedRoute>
                 }
             />

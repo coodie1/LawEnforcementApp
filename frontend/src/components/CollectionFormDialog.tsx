@@ -51,6 +51,9 @@ export function CollectionFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
   const [calendarOpen, setCalendarOpen] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const isEditMode = !!initialData?._id;
 
@@ -81,6 +84,9 @@ export function CollectionFormDialog({
         setFormData(newFormData);
       }
       setError("");
+      setFieldErrors({});
+      setTouchedFields({});
+      setSubmitAttempted(false);
     }
   }, [open, collectionName, initialData]);
 
@@ -99,9 +105,98 @@ export function CollectionFormDialog({
 
   const handleChange = (fieldName: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [fieldName]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (fieldErrors[fieldName]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleBlur = (fieldName: string) => {
+    setTouchedFields((prev) => ({ ...prev, [fieldName]: true }));
+    validateField(fieldName);
+  };
+
+  const validateField = (fieldName: string) => {
+    const field = schemaFields.find((f) => f.name === fieldName);
+    if (!field) return;
+
+    const value = formData[fieldName];
+    let error = "";
+
+    if (field.required) {
+      if (value === undefined || value === null || value === "" || 
+          (Array.isArray(value) && value.length === 0)) {
+        error = "This field is required";
+      }
+    }
+
+    // Additional validation for specific field types
+    if (field.type === "Number" && value !== "" && value !== null && value !== undefined) {
+      if (isNaN(Number(value))) {
+        error = "Please enter a valid number";
+      }
+    }
+
+    setFieldErrors((prev) => {
+      if (error) {
+        return { ...prev, [fieldName]: error };
+      } else {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      }
+    });
+  };
+
+  const validateAllFields = (): boolean => {
+    const errors: Record<string, string> = {};
+    let isValid = true;
+
+    schemaFields.forEach((field) => {
+      if (field.required) {
+        const value = formData[field.name];
+        if (value === undefined || value === null || value === "" || 
+            (Array.isArray(value) && value.length === 0)) {
+          errors[field.name] = "This field is required";
+          isValid = false;
+        }
+      }
+
+      // Additional validation for specific field types
+      if (field.type === "Number" && formData[field.name] !== "" && 
+          formData[field.name] !== null && formData[field.name] !== undefined) {
+        if (isNaN(Number(formData[field.name]))) {
+          errors[field.name] = "Please enter a valid number";
+          isValid = false;
+        }
+      }
+    });
+
+    setFieldErrors(errors);
+    setSubmitAttempted(true);
+    
+    // Mark all fields as touched to show errors
+    const allTouched: Record<string, boolean> = {};
+    schemaFields.forEach((field) => {
+      allTouched[field.name] = true;
+    });
+    setTouchedFields(allTouched);
+
+    return isValid;
   };
 
   const handleSubmit = async () => {
+    // Validate all fields before submission
+    if (!validateAllFields()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError("");
@@ -132,6 +227,9 @@ export function CollectionFormDialog({
       onSuccess();
       onOpenChange(false);
       setFormData({});
+      setFieldErrors({});
+      setTouchedFields({});
+      setSubmitAttempted(false);
     } catch (error: any) {
       const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to save";
       setError(errorMsg);
@@ -210,6 +308,10 @@ export function CollectionFormDialog({
               const fieldValue = formData[field.name] || "";
               const label = formatLabel(field.name);
 
+              // Helper to check if field should show error
+              const showError = (submitAttempted || touchedFields[field.name]) && fieldErrors[field.name];
+              const hasError = !!fieldErrors[field.name];
+
               // Special handling for status field in cases collection
               if (field.name === "status" && collectionName.toLowerCase() === "cases") {
                 return (
@@ -220,8 +322,16 @@ export function CollectionFormDialog({
                     <Select
                       value={fieldValue || ""}
                       onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
                     >
-                      <SelectTrigger id={field.name} className="w-full">
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn("w-full", hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
+                      >
                         <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -229,6 +339,9 @@ export function CollectionFormDialog({
                         <SelectItem value="Closed">Closed</SelectItem>
                       </SelectContent>
                     </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
                   </div>
                 );
               }
@@ -272,37 +385,49 @@ export function CollectionFormDialog({
                 const isDateOfBirth = field.name.toLowerCase() === 'dateofbirth' || 
                                       field.name.toLowerCase() === 'dob';
                 
+                // Helper to check if field should show error (redefined here for date fields)
+                const showErrorDate = (submitAttempted || touchedFields[field.name]) && fieldErrors[field.name];
+                const hasErrorDate = !!fieldErrors[field.name];
+                
                 // If openingDate for new case, show as read-only input
                 if (isOpeningDateNewCase) {
-                  return (
-                    <div key={field.name} className="grid gap-2">
-                      <Label htmlFor={field.name}>
-                        {label} {field.required && <span className="text-destructive">*</span>}
-                      </Label>
-                      <Input
-                        id={field.name}
-                        type="text"
-                        value={isValidDate ? format(dateValue, "PPP") : ""}
-                        readOnly
-                        disabled
-                        className="bg-muted cursor-not-allowed"
-                      />
-                      {/* Hidden input for form validation */}
-                      <input
-                        type="hidden"
-                        value={isValidDate ? dateValue.toISOString().split('T')[0] : ""}
-                        required={field.required}
-                      />
-                    </div>
-                  );
-                }
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Input
+                      id={field.name}
+                      type="text"
+                      value={isValidDate ? format(dateValue, "PPP") : ""}
+                      readOnly
+                      disabled
+                      className="bg-muted cursor-not-allowed"
+                    />
+                    {/* Hidden input for form validation */}
+                    <input
+                      type="hidden"
+                      value={isValidDate ? dateValue.toISOString().split('T')[0] : ""}
+                      required={field.required}
+                    />
+                    {showErrorDate && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
                 
                 return (
                   <div key={field.name} className="grid gap-2">
                     <Label htmlFor={field.name}>
                       {label} {field.required && <span className="text-destructive">*</span>}
                     </Label>
-                    <Popover open={calendarOpen[field.name] || false} onOpenChange={(open) => setCalendarOpen({ ...calendarOpen, [field.name]: open })}>
+                    <Popover open={calendarOpen[field.name] || false} onOpenChange={(open) => {
+                      setCalendarOpen({ ...calendarOpen, [field.name]: open });
+                      if (!open) {
+                        handleBlur(field.name);
+                      }
+                    }}>
                       <PopoverTrigger asChild>
                         <Button
                           id={field.name}
@@ -310,7 +435,8 @@ export function CollectionFormDialog({
                           variant="outline"
                           className={cn(
                             "w-full justify-start text-left font-normal",
-                            !isValidDate && "text-muted-foreground"
+                            !isValidDate && "text-muted-foreground",
+                            hasErrorDate && "border-destructive focus:border-destructive focus:ring-destructive"
                           )}
                           disabled={isSubmitting}
                         >
@@ -336,9 +462,11 @@ export function CollectionFormDialog({
                                 const dateString = `${year}-${month}-${day}`;
                                 handleChange(field.name, dateString);
                                 setCalendarOpen({ ...calendarOpen, [field.name]: false });
+                                handleBlur(field.name);
                               } else {
                                 handleChange(field.name, null);
                                 setCalendarOpen({ ...calendarOpen, [field.name]: false });
+                                handleBlur(field.name);
                               }
                             } catch (error) {
                               console.error("Error handling date selection:", error);
@@ -348,12 +476,9 @@ export function CollectionFormDialog({
                         />
                       </PopoverContent>
                     </Popover>
-                    {/* Hidden input for form validation */}
-                    <input
-                      type="hidden"
-                      value={isValidDate ? dateValue.toISOString().split('T')[0] : ""}
-                      required={field.required}
-                    />
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
                   </div>
                 );
               }
@@ -369,8 +494,13 @@ export function CollectionFormDialog({
                       type="number"
                       value={fieldValue}
                       onChange={(e) => handleChange(field.name, e.target.value ? Number(e.target.value) : null)}
+                      onBlur={() => handleBlur(field.name)}
                       required={field.required}
+                      className={cn(hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
                     />
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
                   </div>
                 );
               }
@@ -403,9 +533,14 @@ export function CollectionFormDialog({
                       id={field.name}
                       value={fieldValue}
                       onChange={(e) => handleChange(field.name, e.target.value)}
+                      onBlur={() => handleBlur(field.name)}
                       required={field.required}
                       rows={4}
+                      className={cn(hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
                     />
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
                   </div>
                 );
               }
@@ -421,9 +556,14 @@ export function CollectionFormDialog({
                     type="text"
                     value={fieldValue}
                     onChange={(e) => handleChange(field.name, e.target.value)}
+                    onBlur={() => handleBlur(field.name)}
                     required={field.required}
                     placeholder={`Enter ${label.toLowerCase()}`}
+                    className={cn(hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
                   />
+                  {showError && (
+                    <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                  )}
                 </div>
               );
             })}

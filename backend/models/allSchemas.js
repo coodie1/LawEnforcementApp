@@ -122,13 +122,14 @@ const weaponSchema = new Schema({
 }, { strict: false, timestamps: true });
 
 const userSchema = new Schema({
-    username: { type: String, required: true, unique: true },
+    username: { type: String, required: false, sparse: true }, // Removed unique constraint - email is the unique identifier
     password: { type: String, required: true },
-    role: { type: String, enum: ['officer', 'public'], default: 'public', required: true },
-    firstName: { type: String },
-    lastName: { type: String },
+    role: { type: String, enum: ['admin', 'officer', 'analyst', 'clerk'], default: 'officer', required: true },
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
     badgeNumber: { type: String },
-    email: { type: String },
+    email: { type: String, required: true, unique: true },
+    temporaryPassword: { type: Boolean, default: false },
 }, { strict: false, timestamps: true });
 
 

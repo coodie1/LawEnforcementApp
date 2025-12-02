@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DottedSurface } from "@/components/ui/dotted-surface";
 import { GlowCard } from "@/components/ui/spotlight-card";
@@ -14,18 +13,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [role, setRole] = useState<"officer" | "public">("public");
   const [isLoading, setIsLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   // Keep form open when any input is focused (for password managers)
@@ -43,15 +38,15 @@ const Auth = () => {
 
     const handleFocusOut = (e: FocusEvent) => {
       // Don't close if focus is moving to another element in the form
-      const relatedTarget = e.relatedTarget as HTMLElement;
-      if (relatedTarget && form.contains(relatedTarget)) {
+      const relatedTarget = e.relatedTarget as HTMLElement | null;
+      if (relatedTarget && relatedTarget instanceof HTMLElement && form.contains(relatedTarget)) {
         return;
       }
       // Add a delay to allow for password manager interactions
       closeTimeoutRef.current = setTimeout(() => {
         // Double check that no input is focused
         const activeElement = document.activeElement;
-        if (!form.contains(activeElement)) {
+        if (activeElement instanceof Node && !form.contains(activeElement)) {
           setIsHovered(false);
         }
       }, 300);
@@ -83,17 +78,11 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      if (isLogin) {
-        await login(username, password);
-        toast.success("Login successful!");
-      } else {
-        await register(username, password, firstName, lastName, role);
-        toast.success("Registration successful!");
-      }
+      await login(email, password);
+      toast.success("Login successful!");
       navigate("/");
     } catch (error: any) {
-      const message = error.response?.data?.message ||
-        (isLogin ? "Login failed. Please check your credentials." : "Registration failed. Please try again.");
+      const message = error.response?.data?.message || "Login failed. Please check your credentials.";
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -124,12 +113,12 @@ const Auth = () => {
           className="relative rounded-2xl overflow-hidden shadow-2xl min-h-[600px] md:min-h-[700px] md:h-[700px]"
           onMouseLeave={(e) => {
             // Only close if mouse truly leaves the entire container
-            const relatedTarget = e.relatedTarget as HTMLElement;
-            if (!relatedTarget || !containerRef.current?.contains(relatedTarget)) {
+            const relatedTarget = e.relatedTarget as HTMLElement | null;
+            if (!relatedTarget || (relatedTarget instanceof Node && !containerRef.current?.contains(relatedTarget))) {
               // Check if any input is focused before closing
               const activeElement = document.activeElement;
               const form = formRef.current;
-              if (!form?.contains(activeElement)) {
+              if (activeElement instanceof Node && form && !form.contains(activeElement)) {
                 closeTimeoutRef.current = setTimeout(() => {
                   setIsHovered(false);
                 }, 200);
@@ -249,19 +238,23 @@ const Auth = () => {
             }}
             onMouseLeave={(e) => {
               // Don't close if mouse is moving to an input or password manager popup
-              const relatedTarget = e.relatedTarget as HTMLElement;
-              if (relatedTarget && (
-                relatedTarget.tagName === 'INPUT' ||
-                relatedTarget.closest('input') ||
-                relatedTarget.closest('[role="listbox"]') ||
-                relatedTarget.closest('[data-radix-popper-content-wrapper]')
-              )) {
-                return;
+              const relatedTarget = e.relatedTarget as HTMLElement | null;
+              if (relatedTarget && relatedTarget instanceof HTMLElement) {
+                if (
+                  relatedTarget.tagName === 'INPUT' ||
+                  (relatedTarget.closest && (
+                    relatedTarget.closest('input') ||
+                    relatedTarget.closest('[role="listbox"]') ||
+                    relatedTarget.closest('[data-radix-popper-content-wrapper]')
+                  ))
+                ) {
+                  return;
+                }
               }
               // Add delay to allow for password manager clicks
               closeTimeoutRef.current = setTimeout(() => {
                 const activeElement = document.activeElement;
-                if (!formRef.current?.contains(activeElement)) {
+                if (activeElement instanceof Node && formRef.current && !formRef.current.contains(activeElement)) {
                   setIsHovered(false);
                 }
               }, 300);
@@ -286,68 +279,27 @@ const Auth = () => {
               {/* Header */}
               <div className="text-center space-y-2">
                 <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
-                  {isLogin ? "Welcome Back" : "Create Account"}
+                  Welcome Back
                 </h2>
                 <p className="text-slate-600 dark:text-slate-400">
-                  {isLogin 
-                    ? "Sign in to access your dashboard" 
-                    : "Register to get started with the system"}
+                  Sign in to access your dashboard
                 </p>
           </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="space-y-5">
-            {!isLogin && (
-                    <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                        <Label htmlFor="firstName" className="text-slate-700 dark:text-slate-300">
-                          First Name
-                        </Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="firstName"
-                    type="text"
-                            placeholder="John"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    disabled={isLoading}
-                            className="pl-10 h-11 !rounded-xl"
-                  />
-                        </div>
-                </div>
-                <div className="space-y-2">
-                        <Label htmlFor="lastName" className="text-slate-700 dark:text-slate-300">
-                          Last Name
-                        </Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="lastName"
-                    type="text"
-                            placeholder="Doe"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    disabled={isLoading}
-                            className="pl-10 h-11 !rounded-xl"
-                  />
-                </div>
-                      </div>
-                    </div>
-            )}
-                  
             <div className="space-y-2">
-                    <Label htmlFor="username" className="text-slate-700 dark:text-slate-300">
-                      Username
+                    <Label htmlFor="email" className="text-slate-700 dark:text-slate-300">
+                      Email
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={isLoading}
                         className="pl-10 h-11 !rounded-xl"
@@ -374,23 +326,6 @@ const Auth = () => {
             </div>
                   </div>
 
-            {!isLogin && (
-              <div className="space-y-2">
-                      <Label htmlFor="role" className="text-slate-700 dark:text-slate-300">
-                        Role
-                      </Label>
-                <Select value={role} onValueChange={(value: "officer" | "public") => setRole(value)} disabled={isLoading}>
-                        <SelectTrigger id="role" className="h-11 !rounded-xl">
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public (View Only)</SelectItem>
-                    <SelectItem value="officer">Officer (Full Access)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
                   <Button 
                     type="submit" 
                     className="w-full h-11 text-base font-semibold bg-gradient-to-r from-[#0b2c75] to-[#0a1f5c] hover:from-[#0a1f5c] hover:to-[#0b2c75] shadow-lg" 
@@ -402,25 +337,10 @@ const Auth = () => {
                         Processing...
                       </span>
                     ) : (
-                      isLogin ? "Sign In" : "Create Account"
+                      "Sign In"
                     )}
             </Button>
           </form>
-
-              {/* Toggle Login/Register */}
-              <div className="text-center pt-4 border-t border-slate-200 dark:border-slate-800">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-                    className="font-semibold text-[#0b2c75] dark:text-blue-400 hover:underline"
-              disabled={isLoading}
-            >
-                    {isLogin ? "Sign up" : "Sign in"}
-            </button>
-                </p>
-              </div>
             </div>
           </div>
         </div>

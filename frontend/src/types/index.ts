@@ -1,11 +1,12 @@
 export interface User {
     id: string | number;
-    username: string;
-    email?: string;
+    username?: string;
+    email: string;
     firstName?: string;
     lastName?: string;
     badgeNumber?: string;
-    role: 'officer' | 'public';
+    role: 'admin' | 'officer' | 'analyst' | 'clerk';
+    temporaryPassword?: boolean;
 }
 
 export interface AuthResponse {

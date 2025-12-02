@@ -72,9 +72,9 @@ function Calendar({
     const context = useDayPicker();
     const today = maxDate || new Date();
     
-    if (props.orientation === "left") {
-      return <ChevronLeft size={16} strokeWidth={2} {...props} aria-hidden="true" />;
-    }
+      if (props.orientation === "left") {
+        return <ChevronLeft size={16} strokeWidth={2} {...props} aria-hidden="true" />;
+      }
     
     // Right arrow (forward navigation)
     if (disableFutureNavigation && maxDate && context) {
@@ -101,7 +101,7 @@ function Calendar({
       }
     }
     
-    return <ChevronRight size={16} strokeWidth={2} {...props} aria-hidden="true" />;
+      return <ChevronRight size={16} strokeWidth={2} {...props} aria-hidden="true" />;
   };
 
   // Custom Caption component - we'll let react-day-picker handle the structure, just override the label
@@ -424,10 +424,10 @@ function Calendar({
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <div className="calendar-wrapper" ref={calendarRef}>
-              <DayPicker
-                showOutsideDays={showOutsideDays}
-                classNames={mergedClassNames}
-                components={mergedComponents}
+    <DayPicker
+      showOutsideDays={showOutsideDays}
+      classNames={mergedClassNames}
+      components={mergedComponents}
                 {...calendarProps}
               />
             </div>

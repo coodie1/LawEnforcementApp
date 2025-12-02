@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, StatsData, Case, Arrest, Officer, Department } from './types';
+import type { AuthResponse, StatsData, Case, Arrest, Officer, Department, User } from './types';
 
 // Create axios instance with base URL
 const API = axios.create({
@@ -17,8 +17,8 @@ API.interceptors.request.use((config) => {
 
 // Auth API
 export const authAPI = {
-    login: async (username: string, password: string): Promise<AuthResponse> => {
-        const { data } = await API.post('/auth/login', { username, password });
+    login: async (email: string, password: string): Promise<AuthResponse> => {
+        const { data } = await API.post('/auth/login', { email, password });
         return data;
     },
     register: async (userData: {
@@ -168,6 +168,36 @@ export const aggregationAPI = {
     },
     getIndexes: async (collectionName: string): Promise<{ indexes: any[] }> => {
         const { data } = await API.get(`/dynamic/${collectionName}/indexes`);
+        return data;
+    },
+};
+
+// Users API (Admin only)
+export const usersAPI = {
+    getAll: async (): Promise<User[]> => {
+        const { data } = await API.get('/users');
+        return data;
+    },
+    create: async (userData: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        role: 'admin' | 'officer' | 'analyst' | 'clerk';
+    }): Promise<{ message: string; user: User; emailSent: boolean }> => {
+        const { data } = await API.post('/users', userData);
+        return data;
+    },
+    update: async (id: string, userData: {
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        role?: 'admin' | 'officer' | 'analyst' | 'clerk';
+    }): Promise<{ message: string; user: User }> => {
+        const { data } = await API.put(`/users/${id}`, userData);
+        return data;
+    },
+    delete: async (id: string): Promise<{ message: string }> => {
+        const { data } = await API.delete(`/users/${id}`);
         return data;
     },
 };
