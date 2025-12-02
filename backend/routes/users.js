@@ -89,9 +89,38 @@ const sendTempPasswordEmail = async (email, fullName, tempPassword) => {
             return false;
         }
         
-        // Get frontend URL from environment or use default
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        // Get frontend URL from environment variables
+        // Priority: FRONTEND_URL > VITE_FRONTEND_URL > derive from API URL > default
+        let frontendUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL;
+        
+        if (!frontendUrl) {
+            // Try to derive from API URL if available (remove /api suffix)
+            const apiUrl = process.env.VITE_API_URL || process.env.API_URL;
+            if (apiUrl) {
+                // Remove /api suffix if present to get base URL
+                frontendUrl = apiUrl.replace(/\/api\/?$/, '');
+                // If API URL is on a different domain (e.g., Render), we can't derive frontend URL
+                // So we'll fall back to default
+                if (frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1')) {
+                    // For localhost, frontend is typically on port 5173
+                    frontendUrl = 'http://localhost:5173';
+                } else {
+                    // For production, frontend and backend are usually on different domains
+                    // So we need FRONTEND_URL to be set explicitly
+                    frontendUrl = null;
+                }
+            }
+        }
+        
+        // Fallback to localhost for development
+        if (!frontendUrl) {
+            frontendUrl = 'http://localhost:5173';
+            console.warn('Frontend URL not set in environment. Using default:', frontendUrl);
+            console.warn('For production, please set FRONTEND_URL in your .env file');
+        }
+        
         const loginUrl = `${frontendUrl}/auth`;
+        console.log('Login URL for email button:', loginUrl);
         
         // Skip verification to avoid blocking - just try to send
         const mailOptions = {
