@@ -45,6 +45,7 @@ const statsRouter = require('./routes/stats');
 const arrestRouter = require('./routes/arrest');
 const usersRouter = require('./routes/users');
 const activityLogsRouter = require('./routes/activityLogs');
+const diagnosticRouter = require('./routes/diagnostic');
 
 app.use('/api/dynamic', dynamicRouter);
 app.use('/api/auth', authRouter);
@@ -52,6 +53,7 @@ app.use('/api/stats', statsRouter);
 app.use('/api/arrest', arrestRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/activity-logs', activityLogsRouter);
+app.use('/api/diagnostic', diagnosticRouter);
 
 app.listen(PORT, () => {
     console.log(`Server is running on port: ${PORT}`);

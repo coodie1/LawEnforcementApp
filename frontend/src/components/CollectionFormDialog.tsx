@@ -61,13 +61,306 @@ export function CollectionFormDialog({
     clientVersion: number;
     serverVersion: number;
   } | null>(null);
+  const [incidentOptions, setIncidentOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [officerOptions, setOfficerOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [locationOptions, setLocationOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [crimeTypeOptions, setCrimeTypeOptions] = useState<string[]>([]);
+  const [arrestOptions, setArrestOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [caseOptions, setCaseOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [evidenceOptions, setEvidenceOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [personOptions, setPersonOptions] = useState<Array<{ id: string; label: string }>>([]);
+  const [loadingOptions, setLoadingOptions] = useState({ 
+    incidents: false, 
+    officers: false, 
+    locations: false, 
+    crimeTypes: false,
+    arrests: false,
+    cases: false,
+    evidence: false,
+    people: false
+  });
 
   const isEditMode = !!initialData?._id;
   const isCasesCollection = collectionName.toLowerCase() === 'cases';
+  const isDepartmentsCollection = collectionName.toLowerCase() === 'departments';
+  const isPeopleCollection = collectionName.toLowerCase() === 'people';
+  const isIncidentsCollection = collectionName.toLowerCase() === 'incidents';
+  const isChargesCollection = collectionName.toLowerCase() === 'charges';
+  const isEvidenceCollection = collectionName.toLowerCase() === 'evidence';
+  const isForensicsCollection = collectionName.toLowerCase() === 'forensics';
+  const isReportsCollection = collectionName.toLowerCase() === 'reports';
+  const isPrisonsCollection = collectionName.toLowerCase() === 'prisons';
+  const isVehiclesCollection = collectionName.toLowerCase() === 'vehicles';
+  const isWeaponsCollection = collectionName.toLowerCase() === 'weapons';
+  
+  // Available role options for person roles field
+  const PERSON_ROLES = ['suspect', 'witness', 'victim', 'complainant', 'informant', 'other'];
+  
+  // Predefined evidence types
+  const EVIDENCE_TYPES = [
+    'Physical',
+    'Digital',
+    'Documentary',
+    'Biological',
+    'Chemical',
+    'Firearm',
+    'Tool Mark',
+    'Trace',
+    'Other'
+  ];
+  
+  // Predefined forensic analysis types
+  const FORENSIC_ANALYSIS_TYPES = [
+    'DNA Analysis',
+    'Fingerprint Analysis',
+    'Ballistics',
+    'Toxicology',
+    'Serology',
+    'Trace Evidence',
+    'Digital Forensics',
+    'Document Examination',
+    'Handwriting Analysis',
+    'Blood Alcohol Content',
+    'Drug Analysis',
+    'Fire Debris Analysis',
+    'Other'
+  ];
+  
+  // Predefined report types
+  const REPORT_TYPES = [
+    'Incident Report',
+    'Arrest Report',
+    'Investigation Report',
+    'Forensic Report',
+    'Evidence Report',
+    'Case Summary',
+    'Court Report',
+    'Witness Statement',
+    'Officer Statement',
+    'Medical Report',
+    'Other'
+  ];
+  
+  // Predefined security levels for prisons
+  const SECURITY_LEVELS = [
+    'Minimum',
+    'Medium',
+    'Maximum'
+  ];
+  
+  // Predefined weapon types
+  const WEAPON_TYPES = [
+    'Handgun',
+    'Rifle',
+    'Shotgun',
+    'Knife',
+    'Blade',
+    'Blunt Object',
+    'Explosive',
+    'Chemical',
+    'Other'
+  ];
+  
+  // Map of logical primary keys for each collection (fields that should be auto-generated and disabled)
+  const PRIMARY_KEY_FIELDS: Record<string, string> = {
+    cases: 'caseID',
+    incidents: 'incidentID',
+    arrests: 'arrestID',
+    officers: 'officerID',
+    departments: 'departmentID',
+    people: 'personID',
+    locations: 'locationID',
+    charges: 'chargeID',
+    evidence: 'evidenceID',
+    forensics: 'forensicsID',
+    reports: 'reportID',
+    prisons: 'prisonID',
+    vehicles: 'vehicleID',
+    weapons: 'weaponID',
+    sentences: 'sentenceID',
+  };
+  
+  const primaryKeyField = PRIMARY_KEY_FIELDS[collectionName.toLowerCase()];
+
+  // Fetch foreign key options for cases, departments, incidents, charges, evidence, forensics, reports, prisons, vehicles, and weapons collections
+  const fetchForeignKeyOptions = async () => {
+    const isCases = collectionName.toLowerCase() === 'cases';
+    const isDepartments = collectionName.toLowerCase() === 'departments';
+    const isIncidents = collectionName.toLowerCase() === 'incidents';
+    const isCharges = collectionName.toLowerCase() === 'charges';
+    const isEvidence = collectionName.toLowerCase() === 'evidence';
+    const isForensics = collectionName.toLowerCase() === 'forensics';
+    const isReports = collectionName.toLowerCase() === 'reports';
+    const isPrisons = collectionName.toLowerCase() === 'prisons';
+    const isVehicles = collectionName.toLowerCase() === 'vehicles';
+    const isWeapons = collectionName.toLowerCase() === 'weapons';
+    
+    if (!isCases && !isDepartments && !isIncidents && !isCharges && !isEvidence && !isForensics && !isReports && !isPrisons && !isVehicles && !isWeapons) {
+      return; // Only fetch for supported collections
+    }
+
+    try {
+      // Set initial loading states
+      setLoadingOptions({ 
+        incidents: (isCases || isWeapons), 
+        officers: (isCases || isDepartments || isReports), 
+        locations: (isDepartments || isIncidents || isPrisons),
+        crimeTypes: isIncidents,
+        arrests: isCharges,
+        cases: (isEvidence || isForensics || isReports || isVehicles),
+        evidence: isForensics,
+        people: isWeapons
+      });
+
+      // Fetch incidents (for cases and weapons)
+      if (isCases || isWeapons) {
+        const incidentsResponse = await API.get('/dynamic/incidents');
+        const incidents = incidentsResponse.data || [];
+        const incidentOpts = incidents.map((incident: any) => {
+          const id = incident.incidentID || incident._id;
+          const label = incident.title 
+            ? `${id} - ${incident.title}` 
+            : id;
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setIncidentOptions(incidentOpts);
+      }
+
+      // Fetch officers (for cases, departments, and reports)
+      if (isCases || isDepartments || isReports) {
+        const officersResponse = await API.get('/dynamic/officers');
+        const officers = officersResponse.data || [];
+        const officerOpts = officers.map((officer: any) => {
+          const id = officer.officerID || officer._id;
+          const badgeNumber = officer.badgeNumber || '';
+          const name = `${officer.firstName || ''} ${officer.lastName || ''}`.trim();
+          const label = badgeNumber 
+            ? `${badgeNumber}${name ? ` - ${name}` : ''}` 
+            : (name || id);
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setOfficerOptions(officerOpts);
+      }
+
+      // Fetch locations (for departments, incidents, and prisons)
+      if (isDepartments || isIncidents || isPrisons) {
+        const locationsResponse = await API.get('/dynamic/locations');
+        const locations = locationsResponse.data || [];
+        const locationOpts = locations.map((location: any) => {
+          const id = location.locationID || location._id;
+          const parts = [location.address, location.city, location.state].filter(Boolean);
+          const label = parts.length > 0 
+            ? `${id} - ${parts.join(', ')}` 
+            : id;
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setLocationOptions(locationOpts);
+      }
+
+      // Fetch unique crime types (for incidents only)
+      if (isIncidents) {
+        try {
+          const crimeTypesResponse = await API.post('/dynamic/incidents/aggregate', {
+            groupBy: ['crimeType'],
+            limit: 100,
+          });
+          const crimeTypes = (crimeTypesResponse.data?.results || [])
+            .map((r: any) => String(r._id || ''))
+            .filter((v: string) => v !== null && v !== undefined && v !== '')
+            .sort();
+          setCrimeTypeOptions(crimeTypes);
+        } catch (err) {
+          console.error('Error fetching crime types:', err);
+          // If aggregation fails, try to get from all incidents
+          try {
+            const incidentsResponse = await API.get('/dynamic/incidents');
+            const incidents = incidentsResponse.data || [];
+            const uniqueCrimeTypes = Array.from(
+              new Set(incidents.map((inc: any) => String(inc.crimeType || '')).filter(Boolean))
+            ).sort() as string[];
+            setCrimeTypeOptions(uniqueCrimeTypes);
+          } catch (fallbackErr) {
+            console.error('Error fetching crime types fallback:', fallbackErr);
+            setCrimeTypeOptions([]);
+          }
+        }
+      }
+
+      // Fetch arrests (for charges collection)
+      if (isCharges) {
+        const arrestsResponse = await API.get('/dynamic/arrests');
+        const arrests = arrestsResponse.data || [];
+        const arrestOpts = arrests.map((arrest: any) => {
+          const id = arrest.arrestID || arrest._id;
+          const label = id; // Just show the arrestID
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setArrestOptions(arrestOpts);
+      }
+
+      // Fetch cases (for evidence, forensics, reports, and vehicles collections)
+      if (isEvidence || isForensics || isReports || isVehicles) {
+        const casesResponse = await API.get('/dynamic/cases');
+        const cases = casesResponse.data || [];
+        const caseOpts = cases.map((caseItem: any) => {
+          const id = caseItem.caseID || caseItem._id;
+          const label = id; // Just show the caseID
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setCaseOptions(caseOpts);
+      }
+
+      // Fetch evidence (for forensics collection)
+      if (isForensics) {
+        const evidenceResponse = await API.get('/dynamic/evidence');
+        const evidence = evidenceResponse.data || [];
+        const evidenceOpts = evidence.map((evidenceItem: any) => {
+          const id = evidenceItem.evidenceID || evidenceItem._id;
+          const label = id; // Just show the evidenceID
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setEvidenceOptions(evidenceOpts);
+      }
+
+      // Fetch people (for weapons collection)
+      if (isWeapons) {
+        const peopleResponse = await API.get('/dynamic/people');
+        const people = peopleResponse.data || [];
+        const personOpts = people.map((person: any) => {
+          const id = person.personID || person._id;
+          const firstName = person.firstName || '';
+          const lastName = person.lastName || '';
+          const name = `${firstName} ${lastName}`.trim();
+          const label = name 
+            ? `${id} - ${name}` 
+            : id;
+          return { id, label };
+        }).sort((a: any, b: any) => a.label.localeCompare(b.label));
+        setPersonOptions(personOpts);
+      }
+    } catch (err) {
+      console.error('Error fetching foreign key options:', err);
+      toast.error('Failed to load dropdown options');
+    } finally {
+      setLoadingOptions({ 
+        incidents: false, 
+        officers: false, 
+        locations: false, 
+        crimeTypes: false,
+        arrests: false,
+        cases: false,
+        evidence: false,
+        people: false
+      });
+    }
+  };
 
   useEffect(() => {
     if (open && collectionName) {
       fetchSchema();
+      if (isCasesCollection || isDepartmentsCollection || isIncidentsCollection || isChargesCollection || isEvidenceCollection || isForensicsCollection || isReportsCollection || isPrisonsCollection || isVehiclesCollection || isWeaponsCollection) {
+        fetchForeignKeyOptions();
+      }
       if (initialData) {
         // Clean initial data - convert dates to input format
         const cleaned = { ...initialData };
@@ -128,8 +421,13 @@ export function CollectionFormDialog({
   const handleChange = (fieldName: string, value: any) => {
     setFormData((prev: any) => ({ ...prev, [fieldName]: value }));
     
-    // Clear error for this field when user starts typing
-    if (fieldErrors[fieldName]) {
+    // Clear error for this field when value changes
+    // For array fields (like roles), clear error if at least one item is selected
+    const shouldClearError = Array.isArray(value) 
+      ? value.length > 0 
+      : (value !== undefined && value !== null && value !== "");
+    
+    if (fieldErrors[fieldName] && shouldClearError) {
       setFieldErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[fieldName];
@@ -147,12 +445,21 @@ export function CollectionFormDialog({
     const field = schemaFields.find((f) => f.name === fieldName);
     if (!field) return;
 
+    // Skip validation for primary key fields when creating new records (they're auto-generated)
+    if (!isEditMode && fieldName === primaryKeyField) {
+      return;
+    }
+
     const value = formData[fieldName];
     let error = "";
 
     if (field.required) {
-      if (value === undefined || value === null || value === "" || 
-          (Array.isArray(value) && value.length === 0)) {
+      // For array fields (like roles), check if array is empty
+      if (Array.isArray(value)) {
+        if (value.length === 0) {
+          error = "This field is required";
+        }
+      } else if (value === undefined || value === null || value === "") {
         error = "This field is required";
       }
     }
@@ -161,6 +468,91 @@ export function CollectionFormDialog({
     if (field.type === "Number" && value !== "" && value !== null && value !== undefined) {
       if (isNaN(Number(value))) {
         error = "Please enter a valid number";
+      }
+    }
+
+    // Age validation for dateOfBirth in people collection (must be at least 10 years old)
+    if (field.name.toLowerCase() === 'dateofbirth' || field.name.toLowerCase() === 'dob') {
+      if (isPeopleCollection && !isEditMode && value) {
+        try {
+          // Parse the date value (could be string in YYYY-MM-DD format)
+          let birthDate: Date;
+          if (typeof value === 'string') {
+            const dateParts = value.split('-');
+            if (dateParts.length === 3) {
+              birthDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+            } else {
+              birthDate = new Date(value);
+            }
+          } else if (value instanceof Date) {
+            birthDate = value;
+          } else {
+            return; // Invalid date format, skip age validation
+          }
+
+          if (!isNaN(birthDate.getTime())) {
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            const dayDiff = today.getDate() - birthDate.getDate();
+            
+            // Calculate exact age
+            let exactAge = age;
+            if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+              exactAge--;
+            }
+
+            if (exactAge < 10) {
+              error = "Person must be at least 10 years old";
+            }
+          }
+        } catch (err) {
+          // If date parsing fails, skip age validation (required validation will catch it)
+        }
+      }
+    }
+
+    // Future date validation for incidents collection (date field cannot be in future)
+    if (field.name.toLowerCase() === 'date' && isIncidentsCollection && !isEditMode && value) {
+      try {
+        // Parse the date value (could be string in YYYY-MM-DD format)
+        let selectedDate: Date;
+        if (typeof value === 'string') {
+          const dateParts = value.split('-');
+          if (dateParts.length === 3) {
+            selectedDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+          } else {
+            selectedDate = new Date(value);
+          }
+        } else if (value instanceof Date) {
+          selectedDate = value;
+        } else {
+          return; // Invalid date format, skip validation
+        }
+
+        if (!isNaN(selectedDate.getTime())) {
+          const today = new Date();
+          // Reset time to midnight for accurate date comparison
+          today.setHours(0, 0, 0, 0);
+          const compareDate = new Date(selectedDate);
+          compareDate.setHours(0, 0, 0, 0);
+
+          if (compareDate > today) {
+            error = "Date cannot be in future";
+          }
+        }
+      } catch (err) {
+        // If date parsing fails, skip validation (required validation will catch it)
+      }
+    }
+
+    // License plate pattern validation for vehicles collection (3 letters followed by 3 numbers)
+    if (field.name.toLowerCase() === 'licenseplate' && isVehiclesCollection && value) {
+      const licensePlatePattern = /^[A-Za-z]{3}[0-9]{3}$/;
+      if (typeof value === 'string' && value.trim() !== '') {
+        if (!licensePlatePattern.test(value.trim())) {
+          error = "License plate must be 3 letters followed by 3 numbers (e.g., ABC123)";
+        }
       }
     }
 
@@ -180,10 +572,20 @@ export function CollectionFormDialog({
     let isValid = true;
 
     schemaFields.forEach((field) => {
+      // Skip validation for primary key fields when creating new records (they're auto-generated)
+      if (!isEditMode && field.name === primaryKeyField) {
+        return;
+      }
+
       if (field.required) {
         const value = formData[field.name];
-        if (value === undefined || value === null || value === "" || 
-            (Array.isArray(value) && value.length === 0)) {
+        // For array fields (like roles), check if array is empty
+        if (Array.isArray(value)) {
+          if (value.length === 0) {
+            errors[field.name] = "This field is required";
+            isValid = false;
+          }
+        } else if (value === undefined || value === null || value === "") {
           errors[field.name] = "This field is required";
           isValid = false;
         }
@@ -195,6 +597,18 @@ export function CollectionFormDialog({
         if (isNaN(Number(formData[field.name]))) {
           errors[field.name] = "Please enter a valid number";
           isValid = false;
+        }
+      }
+
+      // License plate pattern validation for vehicles collection (3 letters followed by 3 numbers)
+      if (field.name.toLowerCase() === 'licenseplate' && isVehiclesCollection && formData[field.name]) {
+        const licensePlatePattern = /^[A-Za-z]{3}[0-9]{3}$/;
+        const value = formData[field.name];
+        if (typeof value === 'string' && value.trim() !== '') {
+          if (!licensePlatePattern.test(value.trim())) {
+            errors[field.name] = "License plate must be 3 letters followed by 3 numbers (e.g., ABC123)";
+            isValid = false;
+          }
         }
       }
     });
@@ -210,6 +624,30 @@ export function CollectionFormDialog({
     setTouchedFields(allTouched);
 
     return isValid;
+  };
+
+  // Check if all required fields are filled (for disabling Create button)
+  const areAllRequiredFieldsFilled = (): boolean => {
+    if (isEditMode) {
+      // For edit mode, allow submission even if some fields are empty (they might be optional)
+      return true;
+    }
+
+    for (const field of schemaFields) {
+      // Skip validation for primary key fields when creating new records (they're auto-generated)
+      if (field.name === primaryKeyField) {
+        continue;
+      }
+
+      if (field.required) {
+        const value = formData[field.name];
+        if (value === undefined || value === null || value === "" || 
+            (Array.isArray(value) && value.length === 0)) {
+          return false;
+        }
+      }
+    }
+    return true;
   };
 
   const handleSubmit = async () => {
@@ -236,6 +674,10 @@ export function CollectionFormDialog({
           delete cleanedData.createdAt;
           delete cleanedData.updatedAt;
           delete cleanedData.version; // Version is auto-created, don't send it for new cases
+          // Remove primary key field - it will be auto-generated by backend
+          if (primaryKeyField && cleanedData[primaryKeyField]) {
+            delete cleanedData[primaryKeyField];
+          }
         }
       });
 
@@ -439,6 +881,9 @@ export function CollectionFormDialog({
               // Helper to check if field should show error
               const showError = (submitAttempted || touchedFields[field.name]) && fieldErrors[field.name];
               const hasError = !!fieldErrors[field.name];
+              
+              // Check if this is a logical primary key field (should be disabled/auto-generated)
+              const isPrimaryKey = field.name === primaryKeyField;
 
               // Special handling for status field in cases collection
               if (field.name === "status" && collectionName.toLowerCase() === "cases") {
@@ -465,6 +910,926 @@ export function CollectionFormDialog({
                       <SelectContent>
                         <SelectItem value="Open">Open</SelectItem>
                         <SelectItem value="Closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for incidentID dropdown in cases collection
+              if (field.name === "incidentID" && isCasesCollection) {
+                const isLoading = loadingOptions.incidents;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading incidents..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {incidentOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No incidents available</SelectItem>
+                        )}
+                        {incidentOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for leadOfficerID dropdown in cases collection
+              if (field.name === "leadOfficerID" && isCasesCollection) {
+                const isLoading = loadingOptions.officers;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading officers..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {officerOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No officers available</SelectItem>
+                        )}
+                        {officerOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for headOfficerID dropdown in departments collection
+              if (field.name === "headOfficerID" && isDepartmentsCollection) {
+                const isLoading = loadingOptions.officers;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading officers..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {officerOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No officers available</SelectItem>
+                        )}
+                        {officerOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for locationID dropdown in departments collection
+              if (field.name === "locationID" && isDepartmentsCollection) {
+                const isLoading = loadingOptions.locations;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading locations..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No locations available</SelectItem>
+                        )}
+                        {locationOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for locationID dropdown in incidents collection
+              if (field.name === "locationID" && isIncidentsCollection) {
+                const isLoading = loadingOptions.locations;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading locations..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No locations available</SelectItem>
+                        )}
+                        {locationOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for crimeType dropdown in incidents collection
+              if (field.name === "crimeType" && isIncidentsCollection) {
+                const isLoading = loadingOptions.crimeTypes;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading crime types..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {crimeTypeOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No crime types available</SelectItem>
+                        )}
+                        {crimeTypeOptions.map((crimeType) => (
+                          <SelectItem key={crimeType} value={crimeType}>
+                            {crimeType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for arrestID dropdown in charges collection
+              if (field.name === "arrestID" && isChargesCollection) {
+                const isLoading = loadingOptions.arrests;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading arrests..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {arrestOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No arrests available</SelectItem>
+                        )}
+                        {arrestOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for caseID dropdown in evidence collection
+              if (field.name === "caseID" && isEvidenceCollection) {
+                const isLoading = loadingOptions.cases;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading cases..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caseOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No cases available</SelectItem>
+                        )}
+                        {caseOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for type dropdown in evidence collection
+              if (field.name === "type" && isEvidenceCollection) {
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EVIDENCE_TYPES.map((evidenceType) => (
+                          <SelectItem key={evidenceType} value={evidenceType}>
+                            {evidenceType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for caseID dropdown in forensics collection
+              if (field.name === "caseID" && isForensicsCollection) {
+                const isLoading = loadingOptions.cases;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading cases..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caseOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No cases available</SelectItem>
+                        )}
+                        {caseOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for evidenceID dropdown in forensics collection
+              if (field.name === "evidenceID" && isForensicsCollection) {
+                const isLoading = loadingOptions.evidence;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading evidence..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {evidenceOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No evidence available</SelectItem>
+                        )}
+                        {evidenceOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for analysisType dropdown in forensics collection
+              if (field.name === "analysisType" && isForensicsCollection) {
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FORENSIC_ANALYSIS_TYPES.map((analysisType) => (
+                          <SelectItem key={analysisType} value={analysisType}>
+                            {analysisType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for caseID dropdown in reports collection
+              if (field.name === "caseID" && isReportsCollection) {
+                const isLoading = loadingOptions.cases;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading cases..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caseOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No cases available</SelectItem>
+                        )}
+                        {caseOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for authorID dropdown in reports collection
+              if (field.name === "authorID" && isReportsCollection) {
+                const isLoading = loadingOptions.officers;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading officers..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {officerOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No officers available</SelectItem>
+                        )}
+                        {officerOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for reportType dropdown in reports collection
+              if (field.name === "reportType" && isReportsCollection) {
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REPORT_TYPES.map((reportType) => (
+                          <SelectItem key={reportType} value={reportType}>
+                            {reportType}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for securityLevel dropdown in prisons collection
+              if (field.name === "securityLevel" && isPrisonsCollection) {
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SECURITY_LEVELS.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for locationID dropdown in prisons collection
+              if (field.name === "locationID" && isPrisonsCollection) {
+                const isLoading = loadingOptions.locations;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading locations..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {locationOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No locations available</SelectItem>
+                        )}
+                        {locationOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for caseID dropdown in vehicles collection
+              if (field.name === "caseID" && isVehiclesCollection) {
+                const isLoading = loadingOptions.cases;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading cases..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {caseOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No cases available</SelectItem>
+                        )}
+                        {caseOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for incidentID dropdown in weapons collection
+              if (field.name === "incidentID" && isWeaponsCollection) {
+                const isLoading = loadingOptions.incidents;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading incidents..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {incidentOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No incidents available</SelectItem>
+                        )}
+                        {incidentOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for ownerID dropdown in weapons collection
+              if (field.name === "ownerID" && isWeaponsCollection) {
+                const isLoading = loadingOptions.people;
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                      disabled={isLoading}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={isLoading ? "Loading people..." : `Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {personOptions.length === 0 && !isLoading && (
+                          <SelectItem value="" disabled>No people available</SelectItem>
+                        )}
+                        {personOptions.map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for type dropdown in weapons collection
+              if (field.name === "type" && isWeaponsCollection) {
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select
+                      value={fieldValue || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          handleBlur(field.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger 
+                        id={field.name} 
+                        className={cn(
+                          "w-full",
+                          hasError && "border-destructive focus:border-destructive focus:ring-destructive"
+                        )}
+                      >
+                        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {WEAPON_TYPES.map((weaponType) => (
+                          <SelectItem key={weaponType} value={weaponType}>
+                            {weaponType}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     {showError && (
@@ -512,6 +1877,24 @@ export function CollectionFormDialog({
                 // Check if this is dateOfBirth - restrict to past dates only
                 const isDateOfBirth = field.name.toLowerCase() === 'dateofbirth' || 
                                       field.name.toLowerCase() === 'dob';
+                
+                // Check if this is date field for incidents - restrict to past dates only
+                const isIncidentDate = field.name.toLowerCase() === 'date' && 
+                                       isIncidentsCollection && 
+                                       !isEditMode;
+                
+                // Calculate maximum date for dateOfBirth (10 years ago for people collection when creating new person)
+                let maxDateForDateOfBirth: Date;
+                if (isDateOfBirth && isPeopleCollection && !isEditMode) {
+                  const today = new Date();
+                  maxDateForDateOfBirth = new Date();
+                  maxDateForDateOfBirth.setFullYear(today.getFullYear() - 10);
+                } else {
+                  maxDateForDateOfBirth = new Date(); // For other cases, just restrict to today
+                }
+                
+                // Calculate maximum date for incident date (today - cannot be in future)
+                const maxDateForIncident = isIncidentDate ? new Date() : undefined;
                 
                 // Helper to check if field should show error (redefined here for date fields)
                 const showErrorDate = (submitAttempted || touchedFields[field.name]) && fieldErrors[field.name];
@@ -576,9 +1959,16 @@ export function CollectionFormDialog({
                         <Calendar
                           mode="single"
                           selected={isValidDate ? dateValue : undefined}
-                          disabled={isDateOfBirth ? { after: new Date() } : undefined}
-                          maxDate={isDateOfBirth ? new Date() : undefined}
-                          disableFutureNavigation={isDateOfBirth}
+                          disabled={
+                            isDateOfBirth 
+                              ? { after: maxDateForDateOfBirth } 
+                              : undefined // Don't visually disable incident dates - show error on click instead
+                          }
+                          maxDate={isDateOfBirth ? maxDateForDateOfBirth : undefined} // Don't set maxDate for incidents - allow selection but validate
+                          disableFutureNavigation={
+                            (isDateOfBirth && !(isPeopleCollection && !isEditMode))
+                            // Don't disable future navigation for incidents - allow clicking but show error
+                          }
                           onSelect={(date) => {
                             try {
                               if (date) {
@@ -588,6 +1978,26 @@ export function CollectionFormDialog({
                                 const month = String(date.getMonth() + 1).padStart(2, '0');
                                 const day = String(date.getDate()).padStart(2, '0');
                                 const dateString = `${year}-${month}-${day}`;
+                                
+                                // For incident dates, validate immediately on selection
+                                if (isIncidentDate) {
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const selectedDate = new Date(date);
+                                  selectedDate.setHours(0, 0, 0, 0);
+                                  
+                                  if (selectedDate > today) {
+                                    // Future date selected - show error but don't close calendar
+                                    setFieldErrors((prev) => ({
+                                      ...prev,
+                                      [field.name]: "Date cannot be in future"
+                                    }));
+                                    setTouchedFields((prev) => ({ ...prev, [field.name]: true }));
+                                    toast.error("Date cannot be in future");
+                                    return; // Don't update the form data or close calendar
+                                  }
+                                }
+                                
                                 handleChange(field.name, dateString);
                                 setCalendarOpen({ ...calendarOpen, [field.name]: false });
                                 handleBlur(field.name);
@@ -624,7 +2034,11 @@ export function CollectionFormDialog({
                       onChange={(e) => handleChange(field.name, e.target.value ? Number(e.target.value) : null)}
                       onBlur={() => handleBlur(field.name)}
                       required={field.required}
-                      className={cn(hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
+                      disabled={isPrimaryKey}
+                      className={cn(
+                        hasError && "border-destructive focus:border-destructive focus:ring-destructive",
+                        isPrimaryKey && "bg-muted cursor-not-allowed"
+                      )}
                     />
                     {showError && (
                       <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
@@ -635,15 +2049,90 @@ export function CollectionFormDialog({
 
               if (field.type === "Boolean") {
                 return (
-                  <div key={field.name} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={field.name}
-                      checked={!!fieldValue}
-                      onCheckedChange={(checked) => handleChange(field.name, checked)}
-                    />
-                    <Label htmlFor={field.name} className="cursor-pointer">
-                      {label} {field.required && <span className="text-destructive">*</span>}
+                  <div key={field.name} className="grid gap-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={field.name}
+                        checked={!!fieldValue}
+                        onCheckedChange={(checked) => {
+                          handleChange(field.name, checked);
+                          handleBlur(field.name);
+                        }}
+                      />
+                      <Label htmlFor={field.name} className="cursor-pointer">
+                        {label} {field.required && <span className="text-destructive">*</span>}
+                      </Label>
+                    </div>
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
+                  </div>
+                );
+              }
+
+              // Special handling for roles field in people collection (multi-select)
+              if (field.name === "roles" && isPeopleCollection) {
+                const selectedRoles = Array.isArray(fieldValue) ? fieldValue : (fieldValue ? [fieldValue] : []);
+                
+                return (
+                  <div key={field.name} className="grid gap-2">
+                    <Label htmlFor={field.name}>
+                      {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
                     </Label>
+                    <div className={cn(
+                      "border rounded-md p-3 space-y-2 min-h-[100px] max-h-[200px] overflow-y-auto",
+                      hasError && "border-destructive"
+                    )}>
+                      {PERSON_ROLES.map((role) => {
+                        const isSelected = selectedRoles.includes(role);
+                        return (
+                          <div key={role} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`${field.name}-${role}`}
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                let newRoles: string[];
+                                if (checked) {
+                                  // Add role if not already selected
+                                  newRoles = [...selectedRoles, role];
+                                } else {
+                                  // Remove role
+                                  newRoles = selectedRoles.filter((r) => r !== role);
+                                }
+                                handleChange(field.name, newRoles);
+                                // Only validate on blur if roles array becomes empty
+                                // If at least one role is selected, clear error immediately
+                                if (newRoles.length > 0) {
+                                  // Clear error immediately when at least one role is selected
+                                  setFieldErrors((prev) => {
+                                    const newErrors = { ...prev };
+                                    delete newErrors[field.name];
+                                    return newErrors;
+                                  });
+                                } else {
+                                  // Validate only if array becomes empty
+                                  handleBlur(field.name);
+                                }
+                              }}
+                            />
+                            <Label 
+                              htmlFor={`${field.name}-${role}`} 
+                              className="cursor-pointer font-normal capitalize"
+                            >
+                              {role}
+                            </Label>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedRoles.length > 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Selected: {selectedRoles.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(', ')}
+                      </div>
+                    )}
+                    {showError && (
+                      <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
+                    )}
                   </div>
                 );
               }
@@ -663,8 +2152,12 @@ export function CollectionFormDialog({
                       onChange={(e) => handleChange(field.name, e.target.value)}
                       onBlur={() => handleBlur(field.name)}
                       required={field.required}
+                      disabled={isPrimaryKey}
                       rows={4}
-                      className={cn(hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
+                      className={cn(
+                        hasError && "border-destructive focus:border-destructive focus:ring-destructive",
+                        isPrimaryKey && "bg-muted cursor-not-allowed"
+                      )}
                     />
                     {showError && (
                       <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
@@ -677,7 +2170,10 @@ export function CollectionFormDialog({
               return (
                 <div key={field.name} className="grid gap-2">
                   <Label htmlFor={field.name}>
-                    {label} {field.required && <span className="text-destructive">*</span>}
+                    {label} {field.required && !isPrimaryKey && <span className="text-destructive">*</span>}
+                    {isPrimaryKey && !isEditMode && (
+                      <span className="text-xs text-muted-foreground ml-2">(Auto-generated)</span>
+                    )}
                   </Label>
                   <Input
                     id={field.name}
@@ -685,9 +2181,13 @@ export function CollectionFormDialog({
                     value={fieldValue}
                     onChange={(e) => handleChange(field.name, e.target.value)}
                     onBlur={() => handleBlur(field.name)}
-                    required={field.required}
-                    placeholder={`Enter ${label.toLowerCase()}`}
-                    className={cn(hasError && "border-destructive focus:border-destructive focus:ring-destructive")}
+                    required={field.required && !isPrimaryKey}
+                    disabled={isPrimaryKey}
+                    placeholder={isPrimaryKey && !isEditMode ? "Will be auto-generated" : `Enter ${label.toLowerCase()}`}
+                    className={cn(
+                      hasError && "border-destructive focus:border-destructive focus:ring-destructive",
+                      isPrimaryKey && "bg-muted cursor-not-allowed"
+                    )}
                   />
                   {showError && (
                     <p className="text-sm text-destructive mt-1">{fieldErrors[field.name]}</p>
@@ -702,7 +2202,10 @@ export function CollectionFormDialog({
           <Button variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || isLoadingSchema}>
+          <Button 
+            onClick={handleSubmit} 
+            disabled={isSubmitting || isLoadingSchema || !areAllRequiredFieldsFilled()}
+          >
             {isSubmitting ? "Saving..." : isEditMode ? "Update" : "Create"}
           </Button>
         </DialogFooter>

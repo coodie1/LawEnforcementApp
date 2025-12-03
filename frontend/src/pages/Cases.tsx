@@ -85,7 +85,9 @@ const Cases = () => {
       const match: Record<string, any> = {};
       
       if (statusFilter !== "all") {
-        match.status = { $regex: statusFilter, $options: "i" };
+        // Use exact match (case-insensitive) to match backend stats query
+        // This ensures consistency: /^open$/i matches exactly "open", "Open", "OPEN", etc.
+        match.status = { $regex: `^${statusFilter}$`, $options: "i" };
       }
       
       if (openingDate) {

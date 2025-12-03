@@ -24,7 +24,62 @@ const authenticateToken = authRouter.authenticateToken || ((req, res, next) => {
     });
 });
 
-// === HELPER FUNCTION ===
+// === HELPER FUNCTIONS ===
+
+// Map collection names to their logical primary key fields and prefixes
+const PRIMARY_KEY_CONFIG = {
+    cases: { field: 'caseID', prefix: 'CAS' },
+    incidents: { field: 'incidentID', prefix: 'INC' },
+    arrests: { field: 'arrestID', prefix: 'ARR' },
+    officers: { field: 'officerID', prefix: 'OFF' },
+    departments: { field: 'departmentID', prefix: 'DEPT' },
+    people: { field: 'personID', prefix: 'PER' },
+    locations: { field: 'locationID', prefix: 'LOC' },
+    charges: { field: 'chargeID', prefix: 'CHG' },
+    evidence: { field: 'evidenceID', prefix: 'EVD' },
+    forensics: { field: 'forensicsID', prefix: 'FOR' },
+    reports: { field: 'reportID', prefix: 'RPT' },
+    prisons: { field: 'prisonID', prefix: 'PRS' },
+    vehicles: { field: 'vehicleID', prefix: 'VEH' },
+    weapons: { field: 'weaponID', prefix: 'WPN' },
+    sentences: { field: 'sentenceID', prefix: 'SEN' },
+};
+
+// Helper function to generate next ID based on last record
+const generateNextID = async (Model, idField, prefix) => {
+    try {
+        // Get all records with the ID field to find the highest number
+        const allRecords = await Model.find({ [idField]: { $exists: true, $ne: null } })
+            .select(idField)
+            .sort({ [idField]: -1 }) // Sort descending to get highest first
+            .limit(1)
+            .lean();
+        
+        if (!allRecords || allRecords.length === 0) {
+            // No records exist, start with 1
+            return `${prefix}1`;
+        }
+        
+        // Extract number from the highest ID
+        const lastID = allRecords[0][idField];
+        if (lastID) {
+            const match = String(lastID).match(/(\d+)$/);
+            if (match) {
+                const number = parseInt(match[1], 10);
+                const nextNumber = number + 1;
+                return `${prefix}${nextNumber}`;
+            }
+        }
+        
+        // Fallback: if pattern doesn't match, start with 1
+        return `${prefix}1`;
+    } catch (err) {
+        console.error('Error generating next ID:', err);
+        // Fallback: return prefix + 1
+        return `${prefix}1`;
+    }
+};
+
 // Safely get the correct Model based on the collection name URL parameter
 const getModel = (collectionName, res) => {
     const lowerCaseName = collectionName.toLowerCase();
@@ -484,7 +539,16 @@ router.route('/:collectionName').post(authenticateToken, logActivity, async (req
     if (!Model) return;
 
     try {
-        const newItem = new Model(req.body);
+        const collectionName = req.params.collectionName.toLowerCase();
+        const idConfig = PRIMARY_KEY_CONFIG[collectionName];
+        const dataToSave = { ...req.body };
+        
+        // Auto-generate logical primary key if not provided and collection has ID config
+        if (idConfig && (!dataToSave[idConfig.field] || dataToSave[idConfig.field].trim() === '')) {
+            dataToSave[idConfig.field] = await generateNextID(Model, idConfig.field, idConfig.prefix);
+        }
+        
+        const newItem = new Model(dataToSave);
         const savedItem = await newItem.save();
         res.json({ message: 'Document created successfully!', result: savedItem });
     } catch (err) { 

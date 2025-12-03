@@ -79,7 +79,7 @@ const Auth = () => {
 
     try {
       await login(email, password);
-      toast.success("Login successful!");
+        toast.success("Login successful!");
       navigate("/");
     } catch (error: any) {
       const message = error.response?.data?.message || "Login failed. Please check your credentials.";
@@ -241,14 +241,14 @@ const Auth = () => {
               const relatedTarget = e.relatedTarget as HTMLElement | null;
               if (relatedTarget && relatedTarget instanceof HTMLElement) {
                 if (
-                  relatedTarget.tagName === 'INPUT' ||
+                relatedTarget.tagName === 'INPUT' ||
                   (relatedTarget.closest && (
-                    relatedTarget.closest('input') ||
-                    relatedTarget.closest('[role="listbox"]') ||
-                    relatedTarget.closest('[data-radix-popper-content-wrapper]')
+                relatedTarget.closest('input') ||
+                relatedTarget.closest('[role="listbox"]') ||
+                relatedTarget.closest('[data-radix-popper-content-wrapper]')
                   ))
                 ) {
-                  return;
+                return;
                 }
               }
               // Add delay to allow for password manager clicks

@@ -168,6 +168,17 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
     return isValid;
   };
 
+  // Check if all required fields are filled (for disabling Submit button)
+  const areAllRequiredFieldsFilled = (): boolean => {
+    // Check all required fields
+    if (!personID || !caseID || !arrestDate || !locationID || 
+        !chargeDescription || chargeDescription.trim() === "" ||
+        !statuteCode || statuteCode.trim() === "") {
+      return false;
+    }
+    return true;
+  };
+
   const handleFieldChange = (fieldName: string, value: any) => {
     // Update the appropriate state
     switch (fieldName) {
@@ -357,16 +368,6 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
           </div>
         )}
 
-        {/* Loading Overlay */}
-        {isSubmitting && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Processing transaction...</p>
-            </div>
-          </div>
-        )}
-
         {/* Error Message */}
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
@@ -525,7 +526,7 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting || isLoadingOptions}>
+          <Button onClick={handleSubmit} disabled={isSubmitting || isLoadingOptions || !areAllRequiredFieldsFilled()}>
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
