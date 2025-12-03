@@ -466,6 +466,18 @@ router.route('/:collectionName').get(async (req, res) => {
     } catch (err) { res.status(400).json('Error fetching data: ' + err.message); }
 });
 
+// --- READ (GET ONE BY ID) ---
+router.route('/:collectionName/:id').get(async (req, res) => {
+    const Model = getModel(req.params.collectionName, res);
+    if (!Model) return;
+
+    try {
+        const data = await Model.findById(req.params.id);
+        if (!data) return res.status(404).json('Document not found.');
+        res.json(data);
+    } catch (err) { res.status(400).json('Error fetching data: ' + err.message); }
+});
+
 // --- CREATE (POST) ---
 router.route('/:collectionName').post(authenticateToken, logActivity, async (req, res) => {
     const Model = getModel(req.params.collectionName, res);

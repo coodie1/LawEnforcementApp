@@ -81,8 +81,9 @@ export function CollectionFormDialog({
         setFormData(cleaned);
         
         // Store version for cases collection (optimistic locking)
-        if (isCasesCollection && cleaned.version !== undefined) {
-          setVersion(cleaned.version);
+        // Default to 1 if version is not present (for cases created before version field was added)
+        if (isCasesCollection) {
+          setVersion(cleaned.version !== undefined ? cleaned.version : 1);
         } else {
           setVersion(undefined);
         }
@@ -236,8 +237,9 @@ export function CollectionFormDialog({
 
       if (isEditMode) {
         // Include version for cases collection (optimistic locking)
-        if (isCasesCollection && version !== undefined) {
-          cleanedData.version = version;
+        // Always send version for cases to enable optimistic locking
+        if (isCasesCollection) {
+          cleanedData.version = version !== undefined ? version : 1;
         }
         
         try {
@@ -302,9 +304,9 @@ export function CollectionFormDialog({
       });
       setFormData(cleaned);
       
-      // Update version
-      if (isCasesCollection && cleaned.version !== undefined) {
-        setVersion(cleaned.version);
+      // Update version (default to 1 if not present)
+      if (isCasesCollection) {
+        setVersion(cleaned.version !== undefined ? cleaned.version : 1);
       }
       
       setError("");
