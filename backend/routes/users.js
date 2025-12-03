@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const mongoose = require('mongoose');
 const models = require('../models/allSchemas');
 const User = models.users;
+const { logActivity } = require('../middleware/activityLogger');
 
 // Verify User model is loaded
 if (!User) {
@@ -70,7 +71,7 @@ const generateTempPassword = () => {
 };
 
 // Send email with temporary password
-const sendTempPasswordEmail = async (email, fullName, tempPassword) => {
+const sendTempPasswordEmail = async (email, fullName, tempPassword, frontendUrl = null) => {
     try {
         // Check if email is configured
         if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || 
@@ -89,37 +90,33 @@ const sendTempPasswordEmail = async (email, fullName, tempPassword) => {
             return false;
         }
         
-        // Get frontend URL from environment variables
-        // Priority: FRONTEND_URL > VITE_FRONTEND_URL > derive from API URL > default
-        let frontendUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL;
+        // Get frontend URL - use provided URL, or derive from environment variables
+        let finalFrontendUrl = frontendUrl;
         
-        if (!frontendUrl) {
-            // Try to derive from API URL if available (remove /api suffix)
-            const apiUrl = process.env.VITE_API_URL || process.env.API_URL;
-            if (apiUrl) {
-                // Remove /api suffix if present to get base URL
-                frontendUrl = apiUrl.replace(/\/api\/?$/, '');
-                // If API URL is on a different domain (e.g., Render), we can't derive frontend URL
-                // So we'll fall back to default
-                if (frontendUrl.includes('localhost') || frontendUrl.includes('127.0.0.1')) {
-                    // For localhost, frontend is typically on port 5173
-                    frontendUrl = 'http://localhost:5173';
-                } else {
-                    // For production, frontend and backend are usually on different domains
-                    // So we need FRONTEND_URL to be set explicitly
-                    frontendUrl = null;
+        if (!finalFrontendUrl) {
+            // Priority: FRONTEND_URL > VITE_FRONTEND_URL > VITE_API_URL pattern > default
+            finalFrontendUrl = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL;
+            
+            if (!finalFrontendUrl) {
+                // Try to get from VITE_API_URL environment variable
+                const apiUrl = process.env.VITE_API_URL;
+                if (apiUrl) {
+                    // For production, VITE_API_URL might be like: https://lawenforcementapp.onrender.com/api
+                    // Frontend is usually on a different domain (Vercel), so we can't derive it
+                    // But if it's localhost, we can derive it
+                    if (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
+                        finalFrontendUrl = 'http://localhost:5173';
+                    }
                 }
             }
         }
         
         // Fallback to localhost for development
-        if (!frontendUrl) {
-            frontendUrl = 'http://localhost:5173';
-            console.warn('Frontend URL not set in environment. Using default:', frontendUrl);
-            console.warn('For production, please set FRONTEND_URL in your .env file');
+        if (!finalFrontendUrl) {
+            finalFrontendUrl = 'http://localhost:5173';
         }
         
-        const loginUrl = `${frontendUrl}/auth`;
+        const loginUrl = `${finalFrontendUrl}/auth`;
         console.log('Login URL for email button:', loginUrl);
         
         // Skip verification to avoid blocking - just try to send
@@ -358,7 +355,7 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // POST /api/users - Create new user (admin only)
-router.post('/', async (req, res, next) => {
+router.post('/', authenticateToken, requireAdmin, logActivity, async (req, res, next) => {
     console.log('=== POST /api/users - Route hit ===');
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
     console.log('Body:', JSON.stringify(req.body, null, 2));
@@ -405,7 +402,7 @@ router.post('/', async (req, res, next) => {
         }
 
         // Validate role
-        const validRoles = ['admin', 'officer', 'analyst', 'clerk'];
+        const validRoles = ['admin', 'officer', 'analyst'];
         if (!validRoles.includes(role)) {
             console.log('Validation failed: Invalid role');
             return res.status(400).json({ message: 'Invalid role' });
@@ -441,11 +438,38 @@ router.post('/', async (req, res, next) => {
         await newUser.save();
         console.log('User saved successfully with ID:', newUser._id);
 
+        // Get frontend URL from request origin header (most reliable for production)
+        let frontendUrlForEmail = null;
+        const origin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
+        if (origin) {
+            frontendUrlForEmail = origin;
+            console.log('Frontend URL from request origin:', frontendUrlForEmail);
+        } else {
+            // Fallback to environment variables
+            frontendUrlForEmail = process.env.FRONTEND_URL || process.env.VITE_FRONTEND_URL;
+            if (frontendUrlForEmail) {
+                console.log('Frontend URL from environment:', frontendUrlForEmail);
+            } else {
+                // Try to derive from VITE_API_URL if available (for localhost only)
+                const apiUrl = process.env.VITE_API_URL;
+                if (apiUrl && (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1'))) {
+                    frontendUrlForEmail = 'http://localhost:5173';
+                    console.log('Frontend URL derived from VITE_API_URL (localhost):', frontendUrlForEmail);
+                }
+            }
+        }
+        
+        // Final fallback to localhost for development
+        if (!frontendUrlForEmail) {
+            frontendUrlForEmail = 'http://localhost:5173';
+            console.warn('Frontend URL not found. Using default:', frontendUrlForEmail);
+        }
+
         // Send email with temporary password (await but don't fail user creation if email fails)
         let emailSent = false;
         try {
             console.log('Attempting to send email...');
-            emailSent = await sendTempPasswordEmail(email, `${firstName} ${lastName}`, tempPassword);
+            emailSent = await sendTempPasswordEmail(email, `${firstName} ${lastName}`, tempPassword, frontendUrlForEmail);
             if (emailSent) {
                 console.log('Email sent successfully to', email);
             } else {
@@ -510,7 +534,7 @@ router.post('/', async (req, res, next) => {
 });
 
 // PUT /api/users/:id - Update user (admin only)
-router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, logActivity, async (req, res) => {
     try {
         const { firstName, lastName, email, role } = req.body;
         const userId = req.params.id;
@@ -537,7 +561,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
         if (firstName !== undefined) user.firstName = firstName;
         if (lastName !== undefined) user.lastName = lastName;
         if (role !== undefined) {
-            const validRoles = ['admin', 'officer', 'analyst', 'clerk'];
+            const validRoles = ['admin', 'officer', 'analyst'];
             if (!validRoles.includes(role)) {
                 return res.status(400).json({ message: 'Invalid role' });
             }
@@ -563,7 +587,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
 });
 
 // DELETE /api/users/:id - Delete user (admin only)
-router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticateToken, requireAdmin, logActivity, async (req, res) => {
     try {
         const userId = req.params.id;
         const currentUserId = req.userId ? req.userId.toString() : null;

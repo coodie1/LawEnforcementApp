@@ -1,6 +1,28 @@
 const router = require('express').Router();
 // Import the master dictionary of all our Mongoose models
 const models = require('../models/allSchemas');
+const { logActivity } = require('../middleware/activityLogger');
+const authRouter = require('./auth');
+const authenticateToken = authRouter.authenticateToken || ((req, res, next) => {
+    // Fallback if not exported
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Access token required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid or expired token' });
+        }
+        req.userId = decoded.id;
+        req.userRole = decoded.role;
+        next();
+    });
+});
 
 // === HELPER FUNCTION ===
 // Safely get the correct Model based on the collection name URL parameter
@@ -445,7 +467,7 @@ router.route('/:collectionName').get(async (req, res) => {
 });
 
 // --- CREATE (POST) ---
-router.route('/:collectionName').post(async (req, res) => {
+router.route('/:collectionName').post(authenticateToken, logActivity, async (req, res) => {
     const Model = getModel(req.params.collectionName, res);
     if (!Model) return;
 
@@ -459,7 +481,7 @@ router.route('/:collectionName').post(async (req, res) => {
 });
 
 // --- UPDATE (PUT) ---
-router.route('/:collectionName/:id').put(async (req, res) => {
+router.route('/:collectionName/:id').put(authenticateToken, logActivity, async (req, res) => {
     const Model = getModel(req.params.collectionName, res);
     if (!Model) return;
 
@@ -473,7 +495,7 @@ router.route('/:collectionName/:id').put(async (req, res) => {
 });
 
 // --- DELETE (DELETE) ---
-router.route('/:collectionName/:id').delete(async (req, res) => {
+router.route('/:collectionName/:id').delete(authenticateToken, logActivity, async (req, res) => {
     const Model = getModel(req.params.collectionName, res);
     if (!Model) return;
 

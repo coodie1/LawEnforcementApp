@@ -20,7 +20,7 @@ export default function CreateUserForm() {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState<"admin" | "officer" | "analyst" | "clerk">("officer");
+    const [role, setRole] = useState<"admin" | "officer" | "analyst">("officer");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const navigate = useNavigate();
@@ -107,21 +107,22 @@ export default function CreateUserForm() {
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => navigate("/admin/users")}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                </Button>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Create New User</h1>
-                    <p className="text-muted-foreground">
-                        Add a new user to the system. A temporary password will be sent via email.
-                    </p>
+        <div className="space-y-4 flex flex-col items-center min-h-full">
+            <div className="w-full max-w-4xl">
+                <div className="flex items-center gap-4 mb-6">
+                    <Button variant="ghost" size="sm" onClick={() => navigate("/admin/users")}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Create New User</h1>
+                        <p className="text-muted-foreground">
+                            Add a new user to the system. A temporary password will be sent via email.
+                        </p>
+                    </div>
                 </div>
-            </div>
 
-            <Card className="max-w-2xl">
+                <Card className="w-full">
                 <CardHeader>
                     <CardTitle>User Information</CardTitle>
                     <CardDescription>
@@ -221,12 +222,10 @@ export default function CreateUserForm() {
                                     <SelectItem value="admin">Admin</SelectItem>
                                     <SelectItem value="officer">Officer</SelectItem>
                                     <SelectItem value="analyst">Analyst</SelectItem>
-                                    <SelectItem value="clerk">Clerk</SelectItem>
                                 </SelectContent>
                             </Select>
                             <p className="text-sm text-muted-foreground">
-                                Admin: Full access | Officer: Case/Arrest/Evidence access | Analyst:
-                                Dashboard only | Clerk: Limited access
+                                Admin: Full access | Officer: Case/Arrest/Evidence access | Analyst: Dashboard only
                             </p>
                         </div>
 
@@ -252,7 +251,8 @@ export default function CreateUserForm() {
                         </div>
                     </form>
                 </CardContent>
-            </Card>
+                </Card>
+            </div>
         </div>
     );
 }

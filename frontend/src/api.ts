@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AuthResponse, StatsData, Case, Arrest, Officer, Department, User } from './types';
+import type { AuthResponse, StatsData, Case, Arrest, Officer, Department, User, ActivityLog } from './types';
 
 // Create axios instance with base URL
 const API = axios.create({
@@ -33,10 +33,11 @@ export const authAPI = {
         return data;
     },
     updateProfile: async (userData: {
-        username?: string;
         password?: string;
         firstName?: string;
         lastName?: string;
+        dateOfBirth?: string;
+        bloodGroup?: string;
     }): Promise<{ user: User }> => {
         const { data } = await API.put('/auth/profile', userData);
         return data;
@@ -143,6 +144,37 @@ export const departmentsAPI = {
     },
 };
 
+// Activity Logs API
+export const activityLogsAPI = {
+    getAll: async (params?: {
+        userId?: string;
+        entityType?: string;
+        action?: string;
+        startDate?: string;
+        endDate?: string;
+        limit?: number;
+        page?: number;
+    }): Promise<{
+        logs: ActivityLog[];
+        pagination: {
+            total: number;
+            page: number;
+            limit: number;
+            totalPages: number;
+        };
+    }> => {
+        const { data } = await API.get('/activity-logs', { params });
+        return data;
+    },
+    getStats: async (): Promise<{
+        actionStats: Array<{ _id: { action: string; entityType: string }; count: number }>;
+        topUsers: Array<{ _id: string; userName: string; userEmail: string; count: number }>;
+    }> => {
+        const { data } = await API.get('/activity-logs/stats');
+        return data;
+    },
+};
+
 // Aggregation API
 export const aggregationAPI = {
     aggregate: async (collectionName: string, aggregationConfig: {
@@ -182,7 +214,7 @@ export const usersAPI = {
         firstName: string;
         lastName: string;
         email: string;
-        role: 'admin' | 'officer' | 'analyst' | 'clerk';
+        role: 'admin' | 'officer' | 'analyst';
     }): Promise<{ message: string; user: User; emailSent: boolean }> => {
         const { data } = await API.post('/users', userData);
         return data;
@@ -191,7 +223,7 @@ export const usersAPI = {
         firstName?: string;
         lastName?: string;
         email?: string;
-        role?: 'admin' | 'officer' | 'analyst' | 'clerk';
+        role?: 'admin' | 'officer' | 'analyst';
     }): Promise<{ message: string; user: User }> => {
         const { data } = await API.put(`/users/${id}`, userData);
         return data;

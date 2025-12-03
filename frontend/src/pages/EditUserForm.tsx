@@ -22,7 +22,7 @@ export default function EditUserForm() {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
-    const [role, setRole] = useState<"admin" | "officer" | "analyst" | "clerk">("officer");
+    const [role, setRole] = useState<"admin" | "officer" | "analyst">("officer");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -144,19 +144,20 @@ export default function EditUserForm() {
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" size="sm" onClick={() => navigate("/admin/users")}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
-                </Button>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Edit User</h1>
-                    <p className="text-muted-foreground">Update user information and role.</p>
+        <div className="space-y-4 flex flex-col items-center min-h-full">
+            <div className="w-full max-w-4xl">
+                <div className="flex items-center gap-4 mb-6">
+                    <Button variant="ghost" size="sm" onClick={() => navigate("/admin/users")}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Back
+                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Edit User</h1>
+                        <p className="text-muted-foreground">Update user information and role.</p>
+                    </div>
                 </div>
-            </div>
 
-            <Card className="max-w-2xl">
+                <Card className="w-full">
                 <CardHeader>
                     <CardTitle>User Information</CardTitle>
                     <CardDescription>Update the user's details below.</CardDescription>
@@ -253,12 +254,10 @@ export default function EditUserForm() {
                                     <SelectItem value="admin">Admin</SelectItem>
                                     <SelectItem value="officer">Officer</SelectItem>
                                     <SelectItem value="analyst">Analyst</SelectItem>
-                                    <SelectItem value="clerk">Clerk</SelectItem>
                                 </SelectContent>
                             </Select>
                             <p className="text-sm text-muted-foreground">
-                                Admin: Full access | Officer: Case/Arrest/Evidence access | Analyst:
-                                Dashboard only | Clerk: Limited access
+                                Admin: Full access | Officer: Case/Arrest/Evidence access | Analyst: Dashboard only
                             </p>
                         </div>
 
@@ -284,7 +283,8 @@ export default function EditUserForm() {
                         </div>
                     </form>
                 </CardContent>
-            </Card>
+                </Card>
+            </div>
         </div>
     );
 }

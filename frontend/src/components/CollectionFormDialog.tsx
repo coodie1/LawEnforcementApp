@@ -193,7 +193,7 @@ export function CollectionFormDialog({
   const handleSubmit = async () => {
     // Validate all fields before submission
     if (!validateAllFields()) {
-      toast.error("Please fill in all required fields");
+      setError("Please fill in all required fields");
       return;
     }
 

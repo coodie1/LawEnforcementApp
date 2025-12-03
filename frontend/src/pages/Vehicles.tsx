@@ -9,15 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Vehicles = () => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   
   // Filter states
   const [makeModelFilter, setMakeModelFilter] = useState<string>("");
@@ -107,8 +112,12 @@ const Vehicles = () => {
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedVehicle(null);
-            setDialogOpen(true);
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setSelectedVehicle(null);
+              setDialogOpen(true);
+            }
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -257,8 +266,12 @@ const Vehicles = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedVehicle(vehicle);
-                                  setDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedVehicle(vehicle);
+                                    setDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -268,13 +281,17 @@ const Vehicles = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete vehicle ${vehicle.vehicleID || vehicle._id}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/vehicles/${vehicle._id}`);
-                                      toast.success("Vehicle deleted successfully!");
-                                      fetchVehicles();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete vehicle");
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    if (window.confirm(`Are you sure you want to delete vehicle ${vehicle.vehicleID || vehicle._id}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/vehicles/${vehicle._id}`);
+                                        toast.success("Vehicle deleted successfully!");
+                                        fetchVehicles();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || "Failed to delete vehicle");
+                                      }
                                     }
                                   }
                                 }}
@@ -301,6 +318,11 @@ const Vehicles = () => {
         initialData={selectedVehicle}
         onSuccess={fetchVehicles}
         title="Vehicles"
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );

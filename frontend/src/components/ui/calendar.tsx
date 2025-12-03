@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   maxDate?: Date;
+  minDate?: Date;
   disableFutureNavigation?: boolean;
 };
 
@@ -20,6 +21,7 @@ function Calendar({
   showOutsideDays = true,
   components: userComponents,
   maxDate,
+  minDate,
   disableFutureNavigation,
   ...props
 }: CalendarProps) {
@@ -67,21 +69,137 @@ function Calendar({
     {} as typeof defaultClassNames,
   );
 
+  // Handle month navigation restriction
+  const handleMonthChange = (date: Date) => {
+    // Prevent navigation to dates before minDate
+    if (minDate) {
+      const minDateMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+      const dateMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      if (dateMonth < minDateMonth) {
+        // Prevent navigation to dates before minDate
+        return;
+      }
+    }
+    
+    // Prevent navigation beyond maxDate (if set)
+    if (maxDate) {
+      const maxDateMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+      const dateMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      if (dateMonth > maxDateMonth) {
+        // Prevent navigation beyond maxDate
+        return;
+      }
+    }
+    
+    // Check for future navigation only if disableFutureNavigation is true and maxDate is not set
+    if (disableFutureNavigation && !maxDate) {
+      const today = new Date();
+      if (date.getFullYear() > today.getFullYear() || 
+          (date.getFullYear() === today.getFullYear() && date.getMonth() > today.getMonth())) {
+        // Prevent navigation to future months - don't call the original handler
+        return;
+      }
+    }
+    
+    if (props.onMonthChange) {
+      props.onMonthChange(date);
+    }
+  };
+
+  // Use a ref to track if we're updating from internal selection vs external prop change
+  const isInternalUpdate = React.useRef(false);
+
   // Custom navigation component that disables forward button when at max date
   const CustomChevron = (props: any) => {
     const context = useDayPicker();
-    const today = maxDate || new Date();
+    const { orientation, onClick, ...restProps } = props;
     
-      if (props.orientation === "left") {
-        return <ChevronLeft size={16} strokeWidth={2} {...props} aria-hidden="true" />;
+    // Create a handler that updates our internal state AND calls the original onClick
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Update our internal state based on orientation
+      const currentDate = new Date(selectedYear, selectedMonth, 1);
+      let newDate: Date;
+      
+      if (orientation === "left") {
+        // Previous month
+        newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      } else {
+        // Next month
+        newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
       }
+      
+      // Check if navigation would go beyond maxDate (if set)
+      if (maxDate) {
+        const maxDateMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+        if (newDate.getFullYear() > maxDateMonth.getFullYear() || 
+            (newDate.getFullYear() === maxDateMonth.getFullYear() && newDate.getMonth() > maxDateMonth.getMonth())) {
+          return; // Prevent navigation beyond maxDate
+        }
+      }
+      
+      // Check if navigation would go before minDate (if set)
+      if (minDate) {
+        const minDateMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        if (newDate.getFullYear() < minDateMonth.getFullYear() || 
+            (newDate.getFullYear() === minDateMonth.getFullYear() && newDate.getMonth() < minDateMonth.getMonth())) {
+          return; // Prevent navigation before minDate
+        }
+      }
+      
+      // Check if navigation is allowed (for disableFutureNavigation with actual today)
+      if (disableFutureNavigation && !maxDate) {
+        const today = new Date();
+        if (newDate.getFullYear() > today.getFullYear() || 
+            (newDate.getFullYear() === today.getFullYear() && newDate.getMonth() > today.getMonth())) {
+          return; // Prevent navigation to future months
+        }
+      }
+      
+      // Mark as internal update
+      isInternalUpdate.current = true;
+      
+      // Update state
+      setSelectedYear(newDate.getFullYear());
+      setSelectedMonth(newDate.getMonth());
+      
+      // Trigger month change handler
+      handleMonthChange(newDate);
+      
+      // Call the original onClick if provided (for react-day-picker's internal handling)
+      if (onClick) {
+        onClick(e);
+      }
+    };
     
-    // Right arrow (forward navigation)
-    if (disableFutureNavigation && maxDate && context) {
-      // Access month from context - it might be in different properties depending on version
-      const displayMonth = (context as any).month || (context as any).displayMonth || new Date();
-      const isAtMaxMonth = displayMonth.getFullYear() === today.getFullYear() && 
-                          displayMonth.getMonth() === today.getMonth();
+    // Left arrow (previous month)
+    if (orientation === "left") {
+      return (
+        <button
+          type="button"
+          onClick={handleClick}
+          className={cn(
+            buttonVariants({ variant: "ghost" }),
+            "size-9 text-muted-foreground/80 hover:text-primary-foreground p-0 rounded-xl transition-all duration-200 hover:bg-primary hover:shadow-sm"
+          )}
+          {...restProps}
+        >
+          <ChevronLeft size={16} strokeWidth={2} aria-hidden="true" />
+        </button>
+      );
+    }
+    
+    // Right arrow (forward navigation) - disable if at maxDate
+    if (maxDate) {
+      const context = useDayPicker();
+      const displayMonth = (context as any).month || (context as any).displayMonth || new Date(selectedYear, selectedMonth, 1);
+      const maxDateMonth = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+      const displayMonthStart = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1);
+      
+      const isAtMaxMonth = displayMonthStart.getFullYear() === maxDateMonth.getFullYear() && 
+                          displayMonthStart.getMonth() === maxDateMonth.getMonth();
       
       if (isAtMaxMonth) {
         return (
@@ -94,6 +212,35 @@ function Calendar({
             )}
             aria-disabled="true"
             onClick={(e) => e.preventDefault()}
+            {...restProps}
+          >
+            <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
+          </button>
+        );
+      }
+    } else if (disableFutureNavigation) {
+      // Only check for future navigation if maxDate is not set
+      const context = useDayPicker();
+      const today = new Date();
+      const displayMonth = (context as any).month || (context as any).displayMonth || new Date(selectedYear, selectedMonth, 1);
+      const displayMonthStart = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), 1);
+      const todayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      
+      const isAtMaxMonth = displayMonthStart.getFullYear() === todayMonth.getFullYear() && 
+                          displayMonthStart.getMonth() === todayMonth.getMonth();
+      
+      if (isAtMaxMonth) {
+        return (
+          <button
+            type="button"
+            disabled
+            className={cn(
+              buttonVariants({ variant: "ghost" }),
+              "size-9 text-muted-foreground/30 p-0 rounded-xl cursor-not-allowed opacity-50"
+            )}
+            aria-disabled="true"
+            onClick={(e) => e.preventDefault()}
+            {...restProps}
           >
             <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
           </button>
@@ -101,7 +248,20 @@ function Calendar({
       }
     }
     
-      return <ChevronRight size={16} strokeWidth={2} {...props} aria-hidden="true" />;
+    // Right arrow (normal navigation)
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        className={cn(
+          buttonVariants({ variant: "ghost" }),
+          "size-9 text-muted-foreground/80 hover:text-primary-foreground p-0 rounded-xl transition-all duration-200 hover:bg-primary hover:shadow-sm"
+        )}
+        {...restProps}
+      >
+        <ChevronRight size={16} strokeWidth={2} aria-hidden="true" />
+      </button>
+    );
   };
 
   // Custom Caption component - we'll let react-day-picker handle the structure, just override the label
@@ -133,7 +293,7 @@ function Calendar({
         <button
           type="button"
           onClick={handleMonthClick}
-          className="text-sm font-medium cursor-pointer hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-muted"
+          className="text-sm font-medium cursor-pointer text-foreground transition-colors px-2 py-1 rounded-md hover:text-primary hover:bg-muted"
           data-caption-part="month"
         >
           {format(displayMonth, "MMMM")}
@@ -141,7 +301,7 @@ function Calendar({
         <button
           type="button"
           onClick={handleYearClick}
-          className="text-sm font-medium cursor-pointer hover:text-primary transition-colors px-2 py-1 rounded-md hover:bg-muted"
+          className="text-sm font-medium cursor-pointer text-foreground transition-colors px-2 py-1 rounded-md hover:text-primary hover:bg-muted"
           data-caption-part="year"
         >
           {currentYear}
@@ -189,7 +349,6 @@ function Calendar({
             <ChevronLeft size={14} className="mr-1" />
             {selectedYear}
           </Button>
-          <span className="text-sm font-medium">{selectedYear}</span>
           <div className="w-16" /> {/* Spacer for alignment */}
         </div>
         <motion.div
@@ -298,35 +457,62 @@ function Calendar({
     ...userComponents,
   };
 
-  // Handle month navigation restriction
-  const handleMonthChange = (date: Date) => {
-    if (disableFutureNavigation && maxDate) {
-      const today = maxDate;
-      if (date.getFullYear() > today.getFullYear() || 
-          (date.getFullYear() === today.getFullYear() && date.getMonth() > today.getMonth())) {
-        // Prevent navigation to future months - don't call the original handler
-        return;
+  // Handle date selection - navigate to month if clicking on outside dates
+  const handleSelect = (selected: any) => {
+    // Handle different modes: single, multiple, range
+    let dateToCheck: Date | undefined;
+    
+    if (selected instanceof Date) {
+      // Single mode
+      dateToCheck = selected;
+    } else if (Array.isArray(selected) && selected.length > 0) {
+      // Multiple mode - check the first selected date
+      dateToCheck = selected[0];
+    } else if (selected && typeof selected === 'object' && 'from' in selected) {
+      // Range mode - check the 'from' date if available, otherwise 'to'
+      dateToCheck = selected.from || selected.to;
+    }
+    
+    if (dateToCheck) {
+      const clickedYear = dateToCheck.getFullYear();
+      const clickedMonth = dateToCheck.getMonth();
+      const currentDisplayMonth = new Date(selectedYear, selectedMonth, 1);
+      
+      // Check if the clicked date is from a different month than currently displayed
+      if (clickedYear !== currentDisplayMonth.getFullYear() || 
+          clickedMonth !== currentDisplayMonth.getMonth()) {
+        // Mark as internal update to prevent useEffect from resetting
+        isInternalUpdate.current = true;
+        
+        // Update the calendar to show the month of the clicked date
+        setSelectedYear(clickedYear);
+        setSelectedMonth(clickedMonth);
+        
+        // Trigger month change handler
+        handleMonthChange(new Date(clickedYear, clickedMonth, 1));
       }
     }
-    if (props.onMonthChange) {
-      props.onMonthChange(date);
+    
+    // Call the original onSelect handler if provided
+    if ('onSelect' in props && props.onSelect) {
+      (props.onSelect as any)(selected);
     }
   };
 
-  // Set toDate to restrict calendar range if maxDate is provided
+  // Set toDate and fromDate to restrict calendar range if maxDate/minDate are provided
   // Always use selectedYear and selectedMonth for the calendar month, not props.month
-  const { month: propsMonth, ...restProps } = props;
-  const calendarProps = {
+  const { month: propsMonth, onSelect, ...restProps } = props as any;
+  const calendarProps: any = {
     ...restProps,
     toDate: maxDate || props.toDate,
+    fromDate: minDate || props.fromDate,
     onMonthChange: handleMonthChange,
+    onSelect: handleSelect,
     // Force the calendar to use our internal state, overriding any month prop
     month: view === "day" ? new Date(selectedYear, selectedMonth, 1) : undefined,
   };
 
   // Sync selected month/year with props.month if provided (only when props.month changes externally)
-  // Use a ref to track if we're updating from internal selection vs external prop change
-  const isInternalUpdate = React.useRef(false);
   
   React.useEffect(() => {
     // Skip if this is an internal update (from month/year selection)

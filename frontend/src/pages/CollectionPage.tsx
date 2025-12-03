@@ -7,7 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import API from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
 import { InlineFilters } from "@/components/InlineFilters";
+import { useAuth } from "@/hooks/useAuth";
 import { aggregationAPI } from "@/api.ts";
 import { toast } from "sonner";
 
@@ -30,12 +32,15 @@ const CollectionPage = ({
   headerGradient,
   titleColor
 }: CollectionPageProps) => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   const [schemaFields, setSchemaFields] = useState<Array<{ name: string; type: string; required: boolean }>>([]);
   const [filters, setFilters] = useState<Array<{ field: string; value: string | Date | null; type: "select" | "date" | "text" }>>([]);
   const [uniqueValues, setUniqueValues] = useState<Record<string, string[]>>({});
@@ -265,8 +270,12 @@ const CollectionPage = ({
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedItem(null);
-            setDialogOpen(true);
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setSelectedItem(null);
+              setDialogOpen(true);
+            }
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -350,8 +359,12 @@ const CollectionPage = ({
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedItem(item);
-                                  setDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedItem(item);
+                                    setDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -361,14 +374,18 @@ const CollectionPage = ({
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  const itemId = item[headers.find(h => h.includes('ID') || h === '_id') || '_id'] || item._id;
-                                  if (window.confirm(`Are you sure you want to delete this ${getSingularTitle(title).toLowerCase()}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/${collectionName}/${item._id}`);
-                                      toast.success(`${getSingularTitle(title)} deleted successfully!`);
-                                      fetchData();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || `Failed to delete ${getSingularTitle(title).toLowerCase()}`);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    const itemId = item[headers.find(h => h.includes('ID') || h === '_id') || '_id'] || item._id;
+                                    if (window.confirm(`Are you sure you want to delete this ${getSingularTitle(title).toLowerCase()}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/${collectionName}/${item._id}`);
+                                        toast.success(`${getSingularTitle(title)} deleted successfully!`);
+                                        fetchData();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || `Failed to delete ${getSingularTitle(title).toLowerCase()}`);
+                                      }
                                     }
                                   }
                                 }}
@@ -395,6 +412,11 @@ const CollectionPage = ({
         initialData={selectedItem}
         onSuccess={fetchData}
         title={title}
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );

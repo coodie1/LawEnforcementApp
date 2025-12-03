@@ -11,8 +11,9 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Search } from "lucide-react";
-import { usersAPI } from "@/api";
+import { Edit, Trash2, Plus, Search, FileText } from "lucide-react";
+import { usersAPI, activityLogsAPI } from "@/api";
+import type { ActivityLog } from "@/types";
 import { toast } from "sonner";
 import type { User } from "@/types";
 import {
@@ -25,6 +26,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { format } from "date-fns";
 
 export default function UserList() {
     const [users, setUsers] = useState<User[]>([]);
@@ -33,6 +42,10 @@ export default function UserList() {
     const [searchQuery, setSearchQuery] = useState("");
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState<User | null>(null);
+    const [activityLogDialogOpen, setActivityLogDialogOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+    const [isLoadingLogs, setIsLoadingLogs] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -98,11 +111,58 @@ export default function UserList() {
                 return "default";
             case "analyst":
                 return "secondary";
-            case "clerk":
-                return "outline";
             default:
                 return "outline";
         }
+    };
+
+    const handleViewActivityLogs = async (user: User) => {
+        setSelectedUser(user);
+        setActivityLogDialogOpen(true);
+        setIsLoadingLogs(true);
+        
+        try {
+            const userId = typeof user.id === 'string' ? user.id : user.id.toString();
+            const response = await activityLogsAPI.getAll({ userId, limit: 100 });
+            setActivityLogs(response.logs);
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to fetch activity logs");
+        } finally {
+            setIsLoadingLogs(false);
+        }
+    };
+
+    const getActionBadgeVariant = (action: string) => {
+        switch (action) {
+            case "create":
+                return "default";
+            case "update":
+                return "secondary";
+            case "delete":
+                return "destructive";
+            default:
+                return "outline";
+        }
+    };
+
+    const getEntityTypeColor = (entityType: string) => {
+        const colors: Record<string, string> = {
+            cases: "bg-blue-100 text-blue-800",
+            arrests: "bg-purple-100 text-purple-800",
+            evidence: "bg-green-100 text-green-800",
+            forensics: "bg-yellow-100 text-yellow-800",
+            reports: "bg-pink-100 text-pink-800",
+            officers: "bg-gray-100 text-gray-800",
+            departments: "bg-indigo-100 text-indigo-800",
+            people: "bg-teal-100 text-teal-800",
+            incidents: "bg-orange-100 text-orange-800",
+            locations: "bg-amber-100 text-amber-800",
+            charges: "bg-rose-100 text-rose-800",
+            vehicles: "bg-red-100 text-red-800",
+            weapons: "bg-slate-100 text-slate-800",
+            users: "bg-violet-100 text-violet-800",
+        };
+        return colors[entityType] || "bg-gray-100 text-gray-800";
     };
 
     if (isLoading) {
@@ -164,7 +224,10 @@ export default function UserList() {
                                     </TableCell>
                                     <TableCell>{user.email}</TableCell>
                                     <TableCell>
-                                        <Badge variant={getRoleBadgeVariant(user.role)}>
+                                        <Badge 
+                                            variant={getRoleBadgeVariant(user.role)}
+                                            className={user.role === "analyst" ? "bg-yellow-500 text-white border-transparent hover:bg-yellow-600" : ""}
+                                        >
                                             {user.role}
                                         </Badge>
                                     </TableCell>
@@ -184,22 +247,32 @@ export default function UserList() {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
+                                                className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                                 onClick={() =>
                                                     navigate(`/admin/users/edit/${user.id}`)
                                                 }
                                             >
-                                                <Edit className="h-4 w-4" />
+                                                <Edit className="h-3.5 w-3.5" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="text-destructive hover:text-destructive"
+                                                className="h-8 w-8 p-0 hover:text-blue-600"
+                                                onClick={() => handleViewActivityLogs(user)}
+                                                title="View Activity Logs"
+                                            >
+                                                <FileText className="h-3.5 w-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                                 onClick={() => {
                                                     setUserToDelete(user);
                                                     setDeleteDialogOpen(true);
                                                 }}
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                <Trash2 className="h-3.5 w-3.5" />
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -233,6 +306,78 @@ export default function UserList() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={activityLogDialogOpen} onOpenChange={setActivityLogDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
+                            Activity Logs - {selectedUser?.firstName} {selectedUser?.lastName}
+                        </DialogTitle>
+                        <DialogDescription>
+                            View all actions performed by this user
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        {isLoadingLogs ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                Loading activity logs...
+                            </div>
+                        ) : activityLogs.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No activity logs found for this user
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Timestamp</TableHead>
+                                            <TableHead>Action</TableHead>
+                                            <TableHead>Entity Type</TableHead>
+                                            <TableHead>Entity</TableHead>
+                                            <TableHead>Details</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {activityLogs.map((log) => (
+                                            <TableRow key={log._id}>
+                                                <TableCell className="font-mono text-sm">
+                                                    {format(
+                                                        new Date(log.createdAt),
+                                                        "MMM dd, yyyy HH:mm:ss"
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant={getActionBadgeVariant(log.action)}>
+                                                        {log.action.toUpperCase()}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className={getEntityTypeColor(log.entityType)}>
+                                                        {log.entityType}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-sm">
+                                                    {log.entityName || log.entityId}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {log.changes && Object.keys(log.changes).length > 0 ? (
+                                                        <div className="text-xs text-muted-foreground max-w-xs truncate">
+                                                            {Object.keys(log.changes).length} field(s) changed
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-muted-foreground">-</span>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

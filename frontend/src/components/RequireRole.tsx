@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface RequireRoleProps {
     children: React.ReactNode;
-    allowedRoles: ('admin' | 'officer' | 'analyst' | 'clerk')[];
+    allowedRoles: ('admin' | 'officer' | 'analyst')[];
 }
 
 export function RequireRole({ children, allowedRoles }: RequireRoleProps) {

@@ -10,15 +10,20 @@ import { Badge } from "@/components/ui/badge";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Officers = () => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [officers, setOfficers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOfficer, setSelectedOfficer] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   
   // Filter states
   const [badgeNumberFilter, setBadgeNumberFilter] = useState<string>("");
@@ -156,8 +161,12 @@ const Officers = () => {
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedOfficer(null);
-            setDialogOpen(true);
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setSelectedOfficer(null);
+              setDialogOpen(true);
+            }
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -302,8 +311,12 @@ const Officers = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedOfficer(officer);
-                                  setDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedOfficer(officer);
+                                    setDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -313,13 +326,17 @@ const Officers = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete officer ${officer.officerID || officer._id}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/officers/${officer._id}`);
-                                      toast.success("Officer deleted successfully!");
-                                      fetchOfficers();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete officer");
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    if (window.confirm(`Are you sure you want to delete officer ${officer.officerID || officer._id}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/officers/${officer._id}`);
+                                        toast.success("Officer deleted successfully!");
+                                        fetchOfficers();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || "Failed to delete officer");
+                                      }
                                     }
                                   }
                                 }}
@@ -346,6 +363,11 @@ const Officers = () => {
         initialData={selectedOfficer}
         onSuccess={fetchOfficers}
         title="Officers"
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );

@@ -2,6 +2,27 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const models = require('../models/allSchemas');
+const { logActivity } = require('../middleware/activityLogger');
+const authRouter = require('./auth');
+const authenticateToken = authRouter.authenticateToken || ((req, res, next) => {
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: 'Access token required' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid or expired token' });
+        }
+        req.userId = decoded.id;
+        req.userRole = decoded.role;
+        next();
+    });
+});
 
 // Helper function to generate unique IDs
 const generateID = (prefix, existingIDs) => {
@@ -15,11 +36,8 @@ const generateID = (prefix, existingIDs) => {
 };
 
 // POST /api/arrest/register
-// Registers a new arrest with transaction support
-router.post('/register', async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
+// Registers a new arrest
+router.post('/register', authenticateToken, logActivity, async (req, res) => {
     try {
         const {
             personID,
@@ -34,8 +52,6 @@ router.post('/register', async (req, res) => {
 
         // Validate required fields
         if (!personID || !caseID || !arrestDate || !locationID || !chargeDescription || !statuteCode) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(400).json({ 
                 success: false, 
                 error: 'Missing required fields: personID, caseID, arrestDate, locationID, chargeDescription, statuteCode' 
@@ -43,32 +59,26 @@ router.post('/register', async (req, res) => {
         }
 
         // Verify person exists
-        const person = await models.people.findOne({ personID }).session(session);
+        const person = await models.people.findOne({ personID });
         if (!person) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({ success: false, error: 'Person not found' });
         }
 
         // Verify case exists and is open
-        const caseDoc = await models.cases.findOne({ caseID, status: { $regex: /^open$/i } }).session(session);
+        const caseDoc = await models.cases.findOne({ caseID, status: { $regex: /^open$/i } });
         if (!caseDoc) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({ success: false, error: 'Case not found or not open' });
         }
 
         // Verify location exists
-        const location = await models.locations.findOne({ locationID }).session(session);
+        const location = await models.locations.findOne({ locationID });
         if (!location) {
-            await session.abortTransaction();
-            session.endSession();
             return res.status(404).json({ success: false, error: 'Location not found' });
         }
 
         // Get existing IDs to generate unique ones
-        const existingArrestIDs = await models.arrests.distinct('arrestID', {}, { session });
-        const existingChargeIDs = await models.charges.distinct('chargeID', {}, { session });
+        const existingArrestIDs = await models.arrests.distinct('arrestID', {});
+        const existingChargeIDs = await models.charges.distinct('chargeID', {});
 
         // Generate unique IDs
         const arrestID = generateID('ARR', existingArrestIDs);
@@ -88,7 +98,7 @@ router.post('/register', async (req, res) => {
             locationID,
             officerID: officerID || null
         });
-        await newArrest.save({ session });
+        await newArrest.save();
 
         // Step 2: Insert charge document
         const newCharge = new models.charges({
@@ -98,13 +108,12 @@ router.post('/register', async (req, res) => {
             statuteCode,
             isConvicted: Boolean(isConvicted)
         });
-        await newCharge.save({ session });
+        await newCharge.save();
 
         // Step 3: Update case status to "open"
         await models.cases.updateOne(
             { caseID },
-            { $set: { status: 'open' } },
-            { session }
+            { $set: { status: 'open' } }
         );
 
         // Step 4: Update person roles to include "suspect" if not already present
@@ -112,12 +121,11 @@ router.post('/register', async (req, res) => {
         if (!currentRoles.includes('suspect')) {
             await models.people.updateOne(
                 { personID },
-                { $set: { roles: [...currentRoles, 'suspect'] } },
-                { session }
+                { $set: { roles: [...currentRoles, 'suspect'] } }
             );
         }
 
-        // Auto-create indexes (non-blocking, outside transaction)
+        // Auto-create indexes (non-blocking)
         const indexPromises = [
             models.arrests.collection.createIndex({ personID: 1 }, { background: true }).catch(() => {}),
             models.arrests.collection.createIndex({ caseID: 1 }, { background: true }).catch(() => {}),
@@ -125,10 +133,6 @@ router.post('/register', async (req, res) => {
             models.charges.collection.createIndex({ arrestID: 1 }, { background: true }).catch(() => {}),
         ];
         Promise.all(indexPromises).catch(() => {}); // Fire and forget
-
-        // Commit transaction
-        await session.commitTransaction();
-        session.endSession();
 
         res.json({
             success: true,
@@ -140,14 +144,10 @@ router.post('/register', async (req, res) => {
         });
 
     } catch (err) {
-        // Abort transaction on error
-        await session.abortTransaction();
-        session.endSession();
-        
         console.error('Arrest registration error:', err);
         res.status(500).json({
             success: false,
-            error: 'Transaction failed, no data saved',
+            error: 'Failed to register arrest',
             details: err.message
         });
     }

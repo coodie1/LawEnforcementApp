@@ -13,15 +13,20 @@ import { format } from "date-fns";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
 import { ArrestRegistrationDialog } from "@/components/ArrestRegistrationDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Arrests = () => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [arrests, setArrests] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
   const [selectedArrest, setSelectedArrest] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   
   // Filter states
   const [arrestDate, setArrestDate] = useState<Date | undefined>(undefined);
@@ -189,7 +194,13 @@ const Arrests = () => {
           shimmerDuration="3s"
           borderRadius="8px"
           className="shadow-md"
-          onClick={() => setRegisterDialogOpen(true)}
+          onClick={() => {
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setRegisterDialogOpen(true);
+            }
+          }}
         >
           <Plus className="h-4 w-4 mr-2" />
           New Arrest
@@ -371,8 +382,12 @@ const Arrests = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedArrest(arrest);
-                                  setRegisterDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedArrest(arrest);
+                                    setRegisterDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -382,13 +397,17 @@ const Arrests = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete arrest ${arrest.arrestID || arrest._id}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/arrests/${arrest._id}`);
-                                      toast.success("Arrest deleted successfully!");
-                                      fetchArrests();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete arrest");
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    if (window.confirm(`Are you sure you want to delete arrest ${arrest.arrestID || arrest._id}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/arrests/${arrest._id}`);
+                                        toast.success("Arrest deleted successfully!");
+                                        fetchArrests();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || "Failed to delete arrest");
+                                      }
                                     }
                                   }
                                 }}
@@ -418,6 +437,11 @@ const Arrests = () => {
         }}
         onSuccess={fetchArrests}
         initialData={selectedArrest}
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );

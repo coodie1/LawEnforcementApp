@@ -5,6 +5,11 @@ import path from 'path'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Move Vite's dep optimization cache outside OneDrive to avoid file locks
+  // on synced directories that cause EPERM on Windows.
+  cacheDir: process.env.LOCALAPPDATA
+    ? path.join(process.env.LOCALAPPDATA, 'vite-cache')
+    : path.resolve(__dirname, '.vite-cache'),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

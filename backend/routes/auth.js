@@ -121,7 +121,9 @@ router.post('/login', async (req, res) => {
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: user.role,
-                temporaryPassword: user.temporaryPassword
+                temporaryPassword: user.temporaryPassword,
+                dateOfBirth: user.dateOfBirth,
+                bloodGroup: user.bloodGroup
             }
         });
     } catch (err) {
@@ -133,7 +135,7 @@ router.post('/login', async (req, res) => {
 // Update Profile
 router.put('/profile', authenticateToken, async (req, res) => {
     try {
-        const { username, password, firstName, lastName } = req.body;
+        const { password, firstName, lastName, dateOfBirth, bloodGroup } = req.body;
         const userId = req.userId;
 
         // Find user
@@ -142,18 +144,19 @@ router.put('/profile', authenticateToken, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Check if username is being changed and if it's already taken
-        if (username && username !== user.username) {
-            const existingUser = await User.findOne({ username });
-            if (existingUser) {
-                return res.status(400).json({ message: 'Username already exists' });
-            }
-            user.username = username;
-        }
-
         // Update name fields
         if (firstName !== undefined) user.firstName = firstName || null;
         if (lastName !== undefined) user.lastName = lastName || null;
+        
+        // Update date of birth
+        if (dateOfBirth !== undefined) {
+            user.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+        }
+        
+        // Update blood group
+        if (bloodGroup !== undefined) {
+            user.bloodGroup = bloodGroup || null;
+        }
 
         // Update password if provided
         if (password) {
@@ -162,6 +165,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
             }
             const salt = await bcrypt.genSalt(10);
             user.password = await bcrypt.hash(password, salt);
+            
+            // If user had a temporary password, set it to false (status changes to Active)
+            if (user.temporaryPassword) {
+                user.temporaryPassword = false;
+            }
         }
 
         await user.save();
@@ -172,7 +180,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
                 username: user.username,
                 firstName: user.firstName,
                 lastName: user.lastName,
-                role: user.role
+                role: user.role,
+                temporaryPassword: user.temporaryPassword,
+                dateOfBirth: user.dateOfBirth,
+                bloodGroup: user.bloodGroup
             }
         });
     } catch (err) {

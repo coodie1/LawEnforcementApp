@@ -35,6 +35,18 @@ export const usersAPI = {
     },
 };
 
+// Activity Logs API
+export const activityLogsAPI = {
+    getAll: async (params) => {
+        const { data } = await API.get('/activity-logs', { params });
+        return data;
+    },
+    getStats: async () => {
+        const { data } = await API.get('/activity-logs/stats');
+        return data;
+    },
+};
+
 export default API;
 
 

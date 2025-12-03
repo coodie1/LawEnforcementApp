@@ -240,7 +240,7 @@ export function ArrestRegistrationDialog({ open, onOpenChange, onSuccess, initia
   const handleSubmit = async () => {
     // Validate all fields
     if (!validateAllFields()) {
-      toast.error("Please fill in all required fields");
+      setError("Please fill in all required fields");
       return;
     }
 

@@ -10,15 +10,20 @@ import { Badge } from "@/components/ui/badge";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Departments = () => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [departments, setDepartments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDepartment, setSelectedDepartment] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   
   // Filter states
   const [cityFilter, setCityFilter] = useState<string>("all");
@@ -131,8 +136,12 @@ const Departments = () => {
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedDepartment(null);
-            setDialogOpen(true);
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setSelectedDepartment(null);
+              setDialogOpen(true);
+            }
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -260,8 +269,12 @@ const Departments = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedDepartment(dept);
-                                  setDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedDepartment(dept);
+                                    setDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -271,13 +284,17 @@ const Departments = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete department ${dept.departmentID || dept._id}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/departments/${dept._id}`);
-                                      toast.success("Department deleted successfully!");
-                                      fetchDepartments();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete department");
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    if (window.confirm(`Are you sure you want to delete department ${dept.departmentID || dept._id}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/departments/${dept._id}`);
+                                        toast.success("Department deleted successfully!");
+                                        fetchDepartments();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || "Failed to delete department");
+                                      }
                                     }
                                   }
                                 }}
@@ -304,6 +321,11 @@ const Departments = () => {
         initialData={selectedDepartment}
         onSuccess={fetchDepartments}
         title="Departments"
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );

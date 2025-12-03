@@ -5,8 +5,10 @@ export interface User {
     firstName?: string;
     lastName?: string;
     badgeNumber?: string;
-    role: 'admin' | 'officer' | 'analyst' | 'clerk';
+    role: 'admin' | 'officer' | 'analyst';
     temporaryPassword?: boolean;
+    dateOfBirth?: Date | string;
+    bloodGroup?: string;
 }
 
 export interface AuthResponse {
@@ -54,4 +56,20 @@ export interface Department {
     departmentID: number;
     departmentName: string;
     location?: string;
+}
+
+export interface ActivityLog {
+    _id: string;
+    userId: string;
+    userEmail: string;
+    userName: string;
+    action: 'create' | 'update' | 'delete';
+    entityType: string;
+    entityId: string;
+    entityName?: string;
+    changes?: Record<string, any>;
+    ipAddress?: string;
+    userAgent?: string;
+    createdAt: string;
+    updatedAt: string;
 }

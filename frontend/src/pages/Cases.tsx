@@ -13,9 +13,13 @@ import { format } from "date-fns";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Cases = () => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [crimeTypeFilter, setCrimeTypeFilter] = useState<string>("all");
@@ -27,6 +31,7 @@ const Cases = () => {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCase, setSelectedCase] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   const [crimeTypes, setCrimeTypes] = useState<string[]>([]);
   const [locations, setLocations] = useState<Array<{ id: string; address: string }>>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
@@ -105,7 +110,7 @@ const Cases = () => {
         },
       ];
 
-      // If crime type or location filter is active, filter by incident
+      // If crime type or location filter is active, filter by incident   
       if (crimeTypeFilter !== "all" || locationFilter !== "all") {
         if (crimeTypeFilter !== "all") {
           match["incident.crimeType"] = crimeTypeFilter;
@@ -186,8 +191,12 @@ const Cases = () => {
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedCase(null);
-            setDialogOpen(true);
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setSelectedCase(null);
+              setDialogOpen(true);
+            }
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -376,8 +385,12 @@ const Cases = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedCase(caseItem);
-                                  setDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedCase(caseItem);
+                                    setDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -387,13 +400,17 @@ const Cases = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete case ${caseItem.caseID || caseItem._id}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/cases/${caseItem._id}`);
-                                      toast.success("Case deleted successfully!");
-                                      fetchCases();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete case");
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    if (window.confirm(`Are you sure you want to delete case ${caseItem.caseID || caseItem._id}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/cases/${caseItem._id}`);
+                                        toast.success("Case deleted successfully!");
+                                        fetchCases();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || "Failed to delete case");
+                                      }
                                     }
                                   }
                                 }}
@@ -420,6 +437,11 @@ const Cases = () => {
         initialData={selectedCase}
         onSuccess={fetchCases}
         title="Cases"
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );

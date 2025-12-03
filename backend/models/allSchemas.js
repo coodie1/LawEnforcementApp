@@ -124,12 +124,27 @@ const weaponSchema = new Schema({
 const userSchema = new Schema({
     username: { type: String, required: false, sparse: true }, // Removed unique constraint - email is the unique identifier
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'officer', 'analyst', 'clerk'], default: 'officer', required: true },
+    role: { type: String, enum: ['admin', 'officer', 'analyst'], default: 'officer', required: true },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     badgeNumber: { type: String },
     email: { type: String, required: true, unique: true },
     temporaryPassword: { type: Boolean, default: false },
+    dateOfBirth: { type: Date },
+    bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] },
+}, { strict: false, timestamps: true });
+
+const activityLogSchema = new Schema({
+    userId: { type: String, required: true },
+    userEmail: { type: String, required: true },
+    userName: { type: String, required: true },
+    action: { type: String, required: true, enum: ['create', 'update', 'delete'] },
+    entityType: { type: String, required: true }, // e.g., 'cases', 'arrests', 'evidence'
+    entityId: { type: String, required: true },
+    entityName: { type: String }, // Human-readable name/identifier (e.g., caseID, arrestID)
+    changes: { type: Schema.Types.Mixed }, // Store changed fields for updates
+    ipAddress: { type: String },
+    userAgent: { type: String },
 }, { strict: false, timestamps: true });
 
 
@@ -154,6 +169,7 @@ const models = {
     vehicles: mongoose.model('Vehicle', vehicleSchema, 'vehicles'),
     weapons: mongoose.model('Weapon', weaponSchema, 'weapons'),
     users: mongoose.model('User', userSchema, 'users'),
+    activitylogs: mongoose.model('ActivityLog', activityLogSchema, 'activitylogs'),
 };
 
 module.exports = models;

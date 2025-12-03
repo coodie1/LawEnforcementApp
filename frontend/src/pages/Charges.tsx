@@ -10,15 +10,20 @@ import { Badge } from "@/components/ui/badge";
 import API from "@/api.ts";
 import { aggregationAPI } from "@/api.ts";
 import { CollectionFormDialog } from "@/components/CollectionFormDialog";
+import { ReadOnlyAccessDialog } from "@/components/ReadOnlyAccessDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const Charges = () => {
+  const { user } = useAuth();
+  const isAnalyst = user?.role === 'analyst';
   const [searchTerm, setSearchTerm] = useState("");
   const [charges, setCharges] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCharge, setSelectedCharge] = useState<any>(null);
+  const [readOnlyDialogOpen, setReadOnlyDialogOpen] = useState(false);
   
   // Filter states
   const [convictionStatusFilter, setConvictionStatusFilter] = useState<string>("all");
@@ -106,8 +111,12 @@ const Charges = () => {
           borderRadius="8px"
           className="shadow-md"
           onClick={() => {
-            setSelectedCharge(null);
-            setDialogOpen(true);
+            if (isAnalyst) {
+              setReadOnlyDialogOpen(true);
+            } else {
+              setSelectedCharge(null);
+              setDialogOpen(true);
+            }
           }}
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -267,8 +276,12 @@ const Charges = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-green-50 hover:text-green-600"
                                 onClick={() => {
-                                  setSelectedCharge(charge);
-                                  setDialogOpen(true);
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    setSelectedCharge(charge);
+                                    setDialogOpen(true);
+                                  }
                                 }}
                               >
                                 <Edit className="h-3.5 w-3.5" />
@@ -278,13 +291,17 @@ const Charges = () => {
                                 size="sm"
                                 className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
                                 onClick={async () => {
-                                  if (window.confirm(`Are you sure you want to delete charge ${charge.chargeID || charge._id}?`)) {
-                                    try {
-                                      await API.delete(`/dynamic/charges/${charge._id}`);
-                                      toast.success("Charge deleted successfully!");
-                                      fetchCharges();
-                                    } catch (err: any) {
-                                      toast.error(err.response?.data || "Failed to delete charge");
+                                  if (isAnalyst) {
+                                    setReadOnlyDialogOpen(true);
+                                  } else {
+                                    if (window.confirm(`Are you sure you want to delete charge ${charge.chargeID || charge._id}?`)) {
+                                      try {
+                                        await API.delete(`/dynamic/charges/${charge._id}`);
+                                        toast.success("Charge deleted successfully!");
+                                        fetchCharges();
+                                      } catch (err: any) {
+                                        toast.error(err.response?.data || "Failed to delete charge");
+                                      }
                                     }
                                   }
                                 }}
@@ -311,6 +328,11 @@ const Charges = () => {
         initialData={selectedCharge}
         onSuccess={fetchCharges}
         title="Charges"
+      />
+      <ReadOnlyAccessDialog
+        open={readOnlyDialogOpen}
+        onOpenChange={setReadOnlyDialogOpen}
+        userRole={user?.role}
       />
     </div>
   );
