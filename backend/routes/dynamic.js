@@ -503,11 +503,29 @@ router.route('/:collectionName/:id').put(authenticateToken, logActivity, async (
         
         // Handle optimistic locking for cases collection
         if (isCasesCollection && req.body.version !== undefined) {
-            const clientVersion = req.body.version;
+            const clientVersion = Number(req.body.version); // Ensure it's a number
             const updateData = { ...req.body };
             delete updateData.version; // Remove version from update data
             
-            // Find and update with version check
+            // First, check if document exists and get current version
+            const currentCase = await Model.findById(req.params.id);
+            if (!currentCase) {
+                return res.status(404).json({ error: 'Document not found.' });
+            }
+            
+            const serverVersion = currentCase.version || 1;
+            
+            // Check if versions match
+            if (Number(serverVersion) !== clientVersion) {
+                return res.status(409).json({
+                    error: 'VersionMismatch',
+                    message: 'Another user has already updated this case.',
+                    clientVersion: clientVersion,
+                    serverVersion: serverVersion
+                });
+            }
+            
+            // Versions match, proceed with update
             const updatedItem = await Model.findOneAndUpdate(
                 { _id: req.params.id, version: clientVersion },
                 { ...updateData, $inc: { version: 1 } },
@@ -515,17 +533,12 @@ router.route('/:collectionName/:id').put(authenticateToken, logActivity, async (
             );
             
             if (!updatedItem) {
-                // Version mismatch - get current version for error message
-                const currentCase = await Model.findById(req.params.id);
-                if (!currentCase) {
-                    return res.status(404).json({ error: 'Document not found.' });
-                }
-                
+                // This shouldn't happen if we just checked, but handle it anyway
                 return res.status(409).json({
                     error: 'VersionMismatch',
                     message: 'Another user has already updated this case.',
                     clientVersion: clientVersion,
-                    serverVersion: currentCase.version || 1
+                    serverVersion: serverVersion
                 });
             }
             

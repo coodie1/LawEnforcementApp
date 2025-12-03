@@ -83,7 +83,11 @@ export function CollectionFormDialog({
         // Store version for cases collection (optimistic locking)
         // Default to 1 if version is not present (for cases created before version field was added)
         if (isCasesCollection) {
-          setVersion(cleaned.version !== undefined ? cleaned.version : 1);
+          // Ensure we capture the version from initialData
+          const versionValue = initialData.version !== undefined 
+            ? initialData.version 
+            : (cleaned.version !== undefined ? cleaned.version : 1);
+          setVersion(versionValue);
         } else {
           setVersion(undefined);
         }
@@ -236,10 +240,41 @@ export function CollectionFormDialog({
       });
 
       if (isEditMode) {
+        // Check if data has actually changed
+        const originalData = { ...initialData };
+        // Remove metadata fields for comparison
+        delete originalData._id;
+        delete originalData.__v;
+        delete originalData.createdAt;
+        delete originalData.updatedAt;
+        delete originalData.version;
+        
+        // Remove metadata from cleanedData for comparison
+        const dataToCompare = { ...cleanedData };
+        delete dataToCompare._id;
+        delete dataToCompare.__v;
+        delete dataToCompare.createdAt;
+        delete dataToCompare.updatedAt;
+        
+        // Compare objects (simple deep comparison)
+        const hasChanges = JSON.stringify(originalData) !== JSON.stringify(dataToCompare);
+        
+        if (!hasChanges) {
+          // No changes made, just close the dialog without making any API call
+          // Version remains unchanged in database
+          toast.info("No changes to save");
+          setVersion(undefined); // Reset version state
+          onOpenChange(false);
+          setIsSubmitting(false);
+          return;
+        }
+        
         // Include version for cases collection (optimistic locking)
         // Always send version for cases to enable optimistic locking
         if (isCasesCollection) {
-          cleanedData.version = version !== undefined ? version : 1;
+          // Ensure version is set - use stored version or get from initialData
+          const versionToSend = version !== undefined ? version : (initialData?.version !== undefined ? initialData.version : 1);
+          cleanedData.version = versionToSend;
         }
         
         try {
@@ -257,7 +292,7 @@ export function CollectionFormDialog({
           if (error.response?.status === 409 && error.response?.data?.error === 'VersionMismatch') {
             const mismatchData = error.response.data;
             setVersionMismatchData({
-              clientVersion: mismatchData.clientVersion || version || 1,
+              clientVersion: mismatchData.clientVersion || version || initialData?.version || 1,
               serverVersion: mismatchData.serverVersion || 1
             });
             setVersionMismatchDialogOpen(true);
@@ -364,8 +399,23 @@ export function CollectionFormDialog({
       .trim();
   };
 
+  // Handle dialog close - ensure no save happens if user closes without clicking Update
+  const handleDialogClose = (shouldClose: boolean) => {
+    if (shouldClose && isSubmitting) {
+      // Don't allow closing while submitting
+      return;
+    }
+    // Reset version state when closing without saving
+    if (shouldClose && !isSubmitting) {
+      setVersion(undefined);
+      setVersionMismatchData(null);
+      setVersionMismatchDialogOpen(false);
+    }
+    onOpenChange(shouldClose);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditMode ? `Edit ${getSingularTitle(title)}` : `Create New ${getSingularTitle(title)}`}</DialogTitle>
@@ -649,7 +699,7 @@ export function CollectionFormDialog({
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+          <Button variant="outline" onClick={() => handleDialogClose(false)} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isSubmitting || isLoadingSchema}>
