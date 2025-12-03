@@ -109,7 +109,9 @@ export function CollectionFormDialog({
     try {
       setIsLoadingSchema(true);
       const response = await API.get(`/dynamic/${collectionName.toLowerCase()}/schema`);
-      setSchemaFields(response.data);
+      // Filter out version field - it's auto-managed by the system
+      const filteredFields = response.data.filter((field: Field) => field.name !== 'version');
+      setSchemaFields(filteredFields);
     } catch (err: any) {
       console.error("Schema fetch error:", err);
       setError("Could not load form fields.");
@@ -222,12 +224,13 @@ export function CollectionFormDialog({
         if (cleanedData[field.name] === "" && (field.type === "Date" || field.type === "Number")) {
           cleanedData[field.name] = null;
         }
-        // Remove _id, __v, createdAt, updatedAt for new records
+        // Remove _id, __v, createdAt, updatedAt, version for new records
         if (!isEditMode) {
           delete cleanedData._id;
           delete cleanedData.__v;
           delete cleanedData.createdAt;
           delete cleanedData.updatedAt;
+          delete cleanedData.version; // Version is auto-created, don't send it for new cases
         }
       });
 
