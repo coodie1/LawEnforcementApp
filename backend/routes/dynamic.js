@@ -486,6 +486,41 @@ router.route('/:collectionName/:id').put(authenticateToken, logActivity, async (
     if (!Model) return;
 
     try {
+        const collectionName = req.params.collectionName.toLowerCase();
+        const isCasesCollection = collectionName === 'cases';
+        
+        // Handle optimistic locking for cases collection
+        if (isCasesCollection && req.body.version !== undefined) {
+            const clientVersion = req.body.version;
+            const updateData = { ...req.body };
+            delete updateData.version; // Remove version from update data
+            
+            // Find and update with version check
+            const updatedItem = await Model.findOneAndUpdate(
+                { _id: req.params.id, version: clientVersion },
+                { ...updateData, $inc: { version: 1 } },
+                { new: true, runValidators: true }
+            );
+            
+            if (!updatedItem) {
+                // Version mismatch - get current version for error message
+                const currentCase = await Model.findById(req.params.id);
+                if (!currentCase) {
+                    return res.status(404).json({ error: 'Document not found.' });
+                }
+                
+                return res.status(409).json({
+                    error: 'VersionMismatch',
+                    message: 'Another user has already updated this case.',
+                    clientVersion: clientVersion,
+                    serverVersion: currentCase.version || 1
+                });
+            }
+            
+            return res.json({ message: 'Document updated successfully!', result: updatedItem });
+        }
+        
+        // Standard update for other collections or cases without version
         const updatedItem = await Model.findByIdAndUpdate(
             req.params.id, req.body, { new: true, runValidators: true }
         );

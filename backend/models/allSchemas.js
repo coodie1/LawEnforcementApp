@@ -41,6 +41,7 @@ const caseSchema = new Schema({
     leadOfficerID: { type: String, required: true },
     status: { type: String, required: true },
     openingDate: { type: String, required: true },
+    version: { type: Number, default: 1 },
 }, { strict: false, timestamps: true });
 
 const departmentSchema = new Schema({

@@ -32,6 +32,7 @@ export interface Case {
     openingDate: string;
     closingDate?: string;
     description?: string;
+    version?: number;
 }
 
 export interface Arrest {

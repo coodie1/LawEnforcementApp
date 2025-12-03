@@ -21,6 +21,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import API from "@/api.ts";
 import { toast } from "sonner";
+import { VersionMismatchDialog } from "@/components/VersionMismatchDialog";
 
 interface Field {
   name: string;
@@ -54,8 +55,15 @@ export function CollectionFormDialog({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [version, setVersion] = useState<number | undefined>(undefined);
+  const [versionMismatchDialogOpen, setVersionMismatchDialogOpen] = useState(false);
+  const [versionMismatchData, setVersionMismatchData] = useState<{
+    clientVersion: number;
+    serverVersion: number;
+  } | null>(null);
 
   const isEditMode = !!initialData?._id;
+  const isCasesCollection = collectionName.toLowerCase() === 'cases';
 
   useEffect(() => {
     if (open && collectionName) {
@@ -71,6 +79,13 @@ export function CollectionFormDialog({
           }
         });
         setFormData(cleaned);
+        
+        // Store version for cases collection (optimistic locking)
+        if (isCasesCollection && cleaned.version !== undefined) {
+          setVersion(cleaned.version);
+        } else {
+          setVersion(undefined);
+        }
       } else {
         // For new records, auto-fill openingDate with today's date for cases
         const newFormData: any = {};
@@ -217,25 +232,83 @@ export function CollectionFormDialog({
       });
 
       if (isEditMode) {
-        await API.put(`/dynamic/${collectionName}/${initialData._id}`, cleanedData);
-        toast.success(`${getSingularTitle(title)} updated successfully!`);
+        // Include version for cases collection (optimistic locking)
+        if (isCasesCollection && version !== undefined) {
+          cleanedData.version = version;
+        }
+        
+        try {
+          await API.put(`/dynamic/${collectionName}/${initialData._id}`, cleanedData);
+          toast.success(`${getSingularTitle(title)} updated successfully!`);
+          onSuccess();
+          onOpenChange(false);
+          setFormData({});
+          setFieldErrors({});
+          setTouchedFields({});
+          setSubmitAttempted(false);
+          setVersion(undefined);
+        } catch (error: any) {
+          // Handle version mismatch error
+          if (error.response?.status === 409 && error.response?.data?.error === 'VersionMismatch') {
+            const mismatchData = error.response.data;
+            setVersionMismatchData({
+              clientVersion: mismatchData.clientVersion || version || 1,
+              serverVersion: mismatchData.serverVersion || 1
+            });
+            setVersionMismatchDialogOpen(true);
+            setError("Version conflict: Another user has updated this case.");
+            return; // Don't close dialog, let user decide what to do
+          }
+          throw error; // Re-throw other errors
+        }
       } else {
         await API.post(`/dynamic/${collectionName}`, cleanedData);
         toast.success(`${getSingularTitle(title)} created successfully!`);
+        onSuccess();
+        onOpenChange(false);
+        setFormData({});
+        setFieldErrors({});
+        setTouchedFields({});
+        setSubmitAttempted(false);
       }
-
-      onSuccess();
-      onOpenChange(false);
-      setFormData({});
-      setFieldErrors({});
-      setTouchedFields({});
-      setSubmitAttempted(false);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || error.response?.data || error.message || "Failed to save";
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.response?.data || error.message || "Failed to save";
       setError(errorMsg);
       toast.error(`Failed to save: ${errorMsg}`);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleReloadLatestVersion = async () => {
+    if (!initialData?._id) return;
+    
+    try {
+      // Fetch latest version of the case
+      const response = await API.get(`/dynamic/${collectionName.toLowerCase()}/${initialData._id}`);
+      const latestData = response.data;
+      
+      // Update form with latest data
+      const cleaned = { ...latestData };
+      Object.keys(cleaned).forEach(key => {
+        if (cleaned[key] instanceof Date) {
+          cleaned[key] = cleaned[key].toISOString().split('T')[0];
+        } else if (typeof cleaned[key] === 'string' && cleaned[key].match(/^\d{4}-\d{2}-\d{2}T/)) {
+          cleaned[key] = cleaned[key].split('T')[0];
+        }
+      });
+      setFormData(cleaned);
+      
+      // Update version
+      if (isCasesCollection && cleaned.version !== undefined) {
+        setVersion(cleaned.version);
+      }
+      
+      setError("");
+      toast.success("Latest version loaded. Please review changes before saving.");
+    } catch (err: any) {
+      toast.error("Failed to reload latest version");
+      console.error("Reload error:", err);
     }
   };
 
@@ -579,6 +652,21 @@ export function CollectionFormDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      {/* Version Mismatch Dialog */}
+      {versionMismatchData && (
+        <VersionMismatchDialog
+          open={versionMismatchDialogOpen}
+          onOpenChange={setVersionMismatchDialogOpen}
+          clientVersion={versionMismatchData.clientVersion}
+          serverVersion={versionMismatchData.serverVersion}
+          onReload={handleReloadLatestVersion}
+          onCancel={() => {
+            setVersionMismatchDialogOpen(false);
+            setVersionMismatchData(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
