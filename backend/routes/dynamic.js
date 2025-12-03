@@ -502,7 +502,8 @@ router.route('/:collectionName/:id').put(authenticateToken, logActivity, async (
         const isCasesCollection = collectionName === 'cases';
         
         // Handle optimistic locking for cases collection
-        if (isCasesCollection && req.body.version !== undefined) {
+        // Only apply version check if version is explicitly provided (not null, not undefined)
+        if (isCasesCollection && req.body.version !== undefined && req.body.version !== null) {
             const clientVersion = Number(req.body.version); // Ensure it's a number
             const updateData = { ...req.body };
             delete updateData.version; // Remove version from update data
@@ -513,32 +514,64 @@ router.route('/:collectionName/:id').put(authenticateToken, logActivity, async (
                 return res.status(404).json({ error: 'Document not found.' });
             }
             
-            const serverVersion = currentCase.version || 1;
+            // Get server version - handle both number and undefined cases
+            let serverVersion = currentCase.version;
+            const versionExists = currentCase.version !== undefined && currentCase.version !== null;
             
-            // Check if versions match
-            if (Number(serverVersion) !== clientVersion) {
+            if (!versionExists) {
+                // If version doesn't exist, initialize it to 1
+                serverVersion = 1;
+            }
+            serverVersion = Number(serverVersion); // Ensure it's a number
+            
+            // Normalize client version
+            const normalizedClientVersion = Number(clientVersion);
+            
+            // Check if versions match (strict equality check)
+            if (serverVersion !== normalizedClientVersion) {
                 return res.status(409).json({
                     error: 'VersionMismatch',
                     message: 'Another user has already updated this case.',
-                    clientVersion: clientVersion,
+                    clientVersion: normalizedClientVersion,
                     serverVersion: serverVersion
                 });
             }
             
             // Versions match, proceed with update
+            // Build query that handles both cases: version exists or doesn't exist
+            let updateQuery;
+            if (!versionExists && normalizedClientVersion === 1) {
+                // Version doesn't exist in DB and client is sending 1
+                // Match documents where version is 1 OR version doesn't exist
+                updateQuery = { 
+                    _id: req.params.id, 
+                    $or: [
+                        { version: 1 }, 
+                        { version: { $exists: false } }
+                    ] 
+                };
+            } else {
+                // Version exists, match exact version
+                updateQuery = { _id: req.params.id, version: serverVersion };
+            }
+            
             const updatedItem = await Model.findOneAndUpdate(
-                { _id: req.params.id, version: clientVersion },
+                updateQuery,
                 { ...updateData, $inc: { version: 1 } },
                 { new: true, runValidators: true }
             );
             
             if (!updatedItem) {
-                // This shouldn't happen if we just checked, but handle it anyway
+                // Document was updated between our check and update (race condition)
+                // Re-fetch to get the latest version
+                const latestCase = await Model.findById(req.params.id);
+                const latestVersion = latestCase ? (Number(latestCase.version) || 1) : serverVersion;
+                
                 return res.status(409).json({
                     error: 'VersionMismatch',
                     message: 'Another user has already updated this case.',
-                    clientVersion: clientVersion,
-                    serverVersion: serverVersion
+                    clientVersion: normalizedClientVersion,
+                    serverVersion: latestVersion
                 });
             }
             
