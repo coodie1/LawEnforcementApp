@@ -1,0 +1,43 @@
+[33m2c9e74d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m sql  injection demo
+[33md57c7fc[m made multiple changes to the collection form dialog
+[33m602dac0[m  version field
+[33m8cbf175[m temp4
+[33ma7c381e[m tempppppppp
+[33mfa6b0dd[m temp
+[33m19564f8[m optimistic locking
+[33ma18eafb[m temporary commit
+[33md023a46[m make use of VITE_API_URL
+[33m69d5e26[m testing some changes
+[33m0fd0f82[m made changes to calendar
+[33mb4e850e[m make edit buttons green
+[33mbaee9aa[m calender autocloses when date is selected
+[33m8a6ba79[m Creating vercel.json in the frontend directory to fix the 404 on reload.
+[33med0342b[m fixed pie chart
+[33mc2d7ce7[m Improving the slide animation on login page
+[33m52d078d[m update hardcoded api url
+[33ma398ba2[m added filters  across component,  created law enforcement favicon, implemented arrest registration with MongoDB transaction
+[33medcdcd9[m made calender look better
+[33m6d3818b[m fixed scheme to match the my database
+[33mfd10654[m moveed from local to atlas
+[33m56f4160[m made animated login pg bg and made login form appealing to eyes . also added animation to new button
+[33mc1c19bd[m Redesign the sidebar with a modern, clean UI, add a new animated button component and added animation on cursor click
+[33mf6711e9[m make new button functional
+[33m30d0d1f[m solved evidence schema problem
+[33m92a292f[m graph changes
+[33m09a7947[m made Ui better
+[33mf486560[m added the role of public/officer in signup page,fixed login page, added logout button
+[33md515759[m Made UI modern and created login page
+[33mf5663b4[m changed files with conflicts
+[33m3317f40[m[33m ([m[1;31mupstream/main[m[33m, [m[1;31mupstream/HEAD[m[33m)[m frontend made better
+[33me3fcb45[m backend made dynamic
+[33m3217161[m frontend and backend connected
+[33m96f2717[m frontend files addded
+[33m665a4a8[m some minorchanges
+[33m115458a[m post created and added new data to db
+[33mc2f4277[m api server made and sucessfully retreieved data
+[33me635509[m mongo db connected with backend database and is now running perfectly
+[33me9bb5ca[m backend completely setup and running
+[33m3759f34[m backend added
+[33mfd9eb26[m Merge branch 'main' of https://github.com/Saadiqpr/LawEnforcementApp
+[33m7bd2b7f[m Initial project setup: backend initialized
+[33m0dd7e14[m Initial commit

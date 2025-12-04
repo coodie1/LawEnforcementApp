@@ -9,7 +9,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "PROPRIETARY",
   "description": "",
   "dependencies": {
     "bcryptjs": "^3.0.3",
