@@ -15,7 +15,8 @@ import {
   Swords,
   AlertTriangle,
   LogOut,
-  UserCog
+  UserCog,
+  Info
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "react-router-dom";
@@ -112,11 +113,18 @@ const SidebarContent = () => {
   });
 
   // User Management link (Admin only)
-  const userManagementLink = isAdmin ? {
-    label: "User Management",
-    href: "/admin/users",
-    icon: UserCog,
-  } : null;
+  const adminLinks = isAdmin ? [
+    {
+      label: "User Management",
+      href: "/admin/users",
+      icon: UserCog,
+    },
+    {
+      label: "About / Credits",
+      href: "/about",
+      icon: Info,
+    }
+  ] : [];
 
   return (
     <>
@@ -147,7 +155,7 @@ const SidebarContent = () => {
             })}
 
             {/* User Management Section (Admin only) */}
-            {isAdmin && userManagementLink && (
+            {isAdmin && (
               <>
                 <div className={cn("mt-4 pt-4 border-t border-white/10", open ? "px-3" : "px-2")}>
                   {open && (
@@ -156,29 +164,33 @@ const SidebarContent = () => {
                     </div>
                   )}
                 </div>
-                <SidebarLink
-                  link={{
-                    label: userManagementLink.label,
-                    href: userManagementLink.href,
-                    icon: (
-                      <userManagementLink.icon
-                        className={cn(
-                          "h-5 w-5 flex-shrink-0 transition-colors min-w-[20px]",
-                          (location.pathname === userManagementLink.href || location.pathname.startsWith(userManagementLink.href))
-                            ? "text-white"
-                            : "text-white/100"
-                        )}
-                      />
-                    ),
-                  }}
-                  className={cn(
-                    "rounded-lg py-2.5 transition-all duration-200 flex-shrink-0",
-                    open ? "px-3" : "px-2",
-                    (location.pathname === userManagementLink.href || location.pathname.startsWith(userManagementLink.href))
-                      ? "bg-white/25 text-white shadow-sm border-l-4 border-white/50"
-                      : "text-white/80 hover:bg-white/15 hover:text-white"
-                  )}
-                />
+                {adminLinks.map((link) => {
+                  const active = location.pathname === link.href || location.pathname.startsWith(link.href);
+                  return (
+                    <SidebarLink
+                      key={link.href}
+                      link={{
+                        label: link.label,
+                        href: link.href,
+                        icon: (
+                          <link.icon
+                            className={cn(
+                              "h-5 w-5 flex-shrink-0 transition-colors min-w-[20px]",
+                              active ? "text-white" : "text-white/100"
+                            )}
+                          />
+                        ),
+                      }}
+                      className={cn(
+                        "rounded-lg py-2.5 transition-all duration-200 flex-shrink-0",
+                        open ? "px-3" : "px-2",
+                        active
+                          ? "bg-white/25 text-white shadow-sm border-l-4 border-white/50"
+                          : "text-white/80 hover:bg-white/15 hover:text-white"
+                      )}
+                    />
+                  );
+                })}
               </>
             )}
           </div>

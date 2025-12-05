@@ -1,6 +1,11 @@
-# Law Enforcement Management System
+# Law Enforcement System
+
+**Developed by: Muhammad Umair Arif**  
+**Company: CodeClad**
 
 A comprehensive law enforcement management system with dynamic data aggregation, automatic indexing, and modern UI components.
+
+**Built by Codeclad.**
 
 **Copyright (c) 2025 Muhammad Umair Arif. All Rights Reserved.**
 

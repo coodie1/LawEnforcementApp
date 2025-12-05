@@ -75,15 +75,15 @@ const logActivity = async (req, res, next) => {
                     
                     // Create activity log entry
                     await ActivityLog.create({
-                        userId: req.userId.toString(),
+                        userId: req.userId?.toString() || 'unknown',
                         userEmail: user.email || 'unknown',
-                        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+                        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'unknown',
                         action: action,
                         entityType: entityType,
                         entityId: entityId?.toString() || 'unknown',
                         entityName: entityName?.toString() || null,
                         changes: changes,
-                        ipAddress: req.ip || req.connection.remoteAddress,
+                        ipAddress: req.ip || req.connection?.remoteAddress || 'unknown',
                         userAgent: req.get('user-agent') || 'unknown',
                     });
                 }
@@ -109,6 +109,8 @@ function getActionFromMethod(method) {
             return 'update';
         case 'DELETE':
             return 'delete';
+        case 'GET':
+            return 'read';
         default:
             return null;
     }
@@ -129,4 +131,49 @@ function getEntityTypeFromPath(path) {
 }
 
 module.exports = { logActivity };
+
+/**
+ * Lightweight helper to log custom events (e.g., auth success/failure, admin actions)
+ */
+async function logCustomActivity({
+    req,
+    action,
+    entityType,
+    entityId = 'unknown',
+    entityName = null,
+    changes = null,
+    userOverride = null,
+}) {
+    try {
+        const User = models.users;
+        const user =
+            userOverride ||
+            (req?.userId ? await User.findById(req.userId) : null);
+
+        const userId = user?.id?.toString() || userOverride?.userId || 'unknown';
+        const userEmail = user?.email || userOverride?.userEmail || 'unknown';
+        const userName =
+            `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+            userOverride?.userName ||
+            userEmail ||
+            'unknown';
+
+        await ActivityLog.create({
+            userId,
+            userEmail,
+            userName,
+            action,
+            entityType,
+            entityId: entityId?.toString() || 'unknown',
+            entityName: entityName?.toString() || null,
+            changes,
+            ipAddress: req?.ip || req?.connection?.remoteAddress || 'unknown',
+            userAgent: req?.get?.('user-agent') || 'unknown',
+        });
+    } catch (err) {
+        console.error('Activity log error:', err.message);
+    }
+}
+
+module.exports.logCustomActivity = logCustomActivity;
 

@@ -26,8 +26,11 @@ const MainContent = ({ children }: { children: ReactNode }) => {
             </div>
           </header>
 
-        <main className="flex-1 p-6 bg-[#F5F7FA] overflow-y-auto">
+        <main className="relative flex-1 p-6 bg-[#F5F7FA] overflow-y-auto">
             {children}
+            <div className="pointer-events-none absolute bottom-3 right-4 text-xs font-semibold text-[#0b2c75]/25 select-none">
+              CodeClad
+            </div>
           </main>
         </div>
   );

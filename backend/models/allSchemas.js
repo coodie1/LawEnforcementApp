@@ -136,11 +136,15 @@ const userSchema = new Schema({
 }, { strict: false, timestamps: true });
 
 const activityLogSchema = new Schema({
-    userId: { type: String, required: true },
-    userEmail: { type: String, required: true },
-    userName: { type: String, required: true },
-    action: { type: String, required: true, enum: ['create', 'update', 'delete'] },
-    entityType: { type: String, required: true }, // e.g., 'cases', 'arrests', 'evidence'
+    userId: { type: String, required: false, default: 'unknown' },
+    userEmail: { type: String, required: false, default: 'unknown' },
+    userName: { type: String, required: false, default: 'unknown' },
+    action: { 
+        type: String, 
+        required: true, 
+        enum: ['create', 'update', 'delete', 'read', 'login_success', 'login_failure', 'logout', 'admin_action'] 
+    },
+    entityType: { type: String, required: true }, // e.g., 'cases', 'arrests', 'evidence', 'auth'
     entityId: { type: String, required: true },
     entityName: { type: String }, // Human-readable name/identifier (e.g., caseID, arrestID)
     changes: { type: Schema.Types.Mixed }, // Store changed fields for updates

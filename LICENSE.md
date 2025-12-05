@@ -2,7 +2,9 @@
 
 ## Copyright Notice
 
-Copyright (c) 2025 Muhammad Umair Arif . All Rights Reserved.
+© 2025 CodeClad. All rights reserved.
+
+This project is proprietary and cannot be copied, modified, or distributed without written permission from CodeClad. Founder: Muhammad Umair Arif.
 
 ## Terms and Conditions
 
@@ -39,8 +41,7 @@ Any unauthorized use, copying, or distribution of this Software, or any portion 
 
 ### Contact
 
-For licensing inquiries or permission requests, please contact:
-[Your Email Address]
+For licensing inquiries or permission requests, please contact CodeClad at: thecodeclad@gmail.com
 
 ---
 

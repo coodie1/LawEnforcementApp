@@ -15,6 +15,23 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+// Auto-handle invalid/expired tokens
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message;
+    if (status === 401 || status === 403 || message === 'Invalid or expired token') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/auth') {
+        window.location.href = '/auth';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Users API (Admin only)
 export const usersAPI = {
     getAll: async () => {

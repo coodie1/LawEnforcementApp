@@ -25,6 +25,7 @@ import Sentences from "./pages/Sentences";
 import CollectionPage from "./pages/CollectionPage";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import About from "./pages/About";
 import ClickSpark from "@/components/ClickSpark";
 import UserList from "./pages/UserList";
 import CreateUserForm from "./pages/CreateUserForm";
@@ -233,6 +234,28 @@ const AppRoutes = () => {
                                 <Weapons />
                             </DashboardLayout>
                         </RequireRole>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/about"
+                element={
+                    <ProtectedRoute>
+                        <DashboardLayout>
+                            <About />
+                        </DashboardLayout>
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/about"
+                element={
+                    <ProtectedRoute>
+                        <RequireAdmin>
+                            <DashboardLayout>
+                                <About />
+                            </DashboardLayout>
+                        </RequireAdmin>
                     </ProtectedRoute>
                 }
             />

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const models = require('../models/allSchemas');
 const User = models.users;
+const { logCustomActivity } = require('../middleware/activityLogger');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
 
@@ -70,6 +71,13 @@ router.post('/register', async (req, res) => {
                 role: newUser.role
             }
         });
+        await logCustomActivity({
+            req,
+            action: 'create',
+            entityType: 'auth/register',
+            entityId: newUser._id?.toString() || 'unknown',
+            entityName: newUser.email || newUser.username,
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error during registration' });
@@ -96,12 +104,36 @@ router.post('/login', async (req, res) => {
         }
 
         if (!user) {
+            await logCustomActivity({
+                req,
+                action: 'login_failure',
+                entityType: 'auth',
+                entityId: 'unknown',
+                entityName: email || username || 'unknown',
+                userOverride: {
+                    userId: 'unknown',
+                    userEmail: email || username || 'unknown',
+                    userName: email || username || 'unknown',
+                },
+            });
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
         // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            await logCustomActivity({
+                req,
+                action: 'login_failure',
+                entityType: 'auth',
+                entityId: user._id?.toString() || 'unknown',
+                entityName: email || username || user.email,
+                userOverride: {
+                    userId: user._id?.toString() || 'unknown',
+                    userEmail: user.email || email || username || 'unknown',
+                    userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'unknown',
+                },
+            });
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
@@ -125,6 +157,13 @@ router.post('/login', async (req, res) => {
                 dateOfBirth: user.dateOfBirth,
                 bloodGroup: user.bloodGroup
             }
+        });
+        await logCustomActivity({
+            req,
+            action: 'login_success',
+            entityType: 'auth',
+            entityId: user._id?.toString() || 'unknown',
+            entityName: user.email,
         });
     } catch (err) {
         console.error(err);
@@ -185,6 +224,14 @@ router.put('/profile', authenticateToken, async (req, res) => {
                 dateOfBirth: user.dateOfBirth,
                 bloodGroup: user.bloodGroup
             }
+        });
+        await logCustomActivity({
+            req,
+            action: 'update',
+            entityType: 'auth/profile',
+            entityId: user._id?.toString() || 'unknown',
+            entityName: user.email || user.username,
+            changes: req.body || null,
         });
     } catch (err) {
         console.error(err);
