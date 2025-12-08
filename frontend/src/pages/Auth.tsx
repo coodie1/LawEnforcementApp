@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showOtp, setShowOtp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -78,12 +80,15 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, showOtp ? otp || undefined : undefined);
         toast.success("Login successful!");
       navigate("/");
     } catch (error: any) {
       const message = error.response?.data?.message || "Login failed. Please check your credentials.";
       toast.error(message);
+      if (message.toLowerCase().includes("otp") || message.toLowerCase().includes("mfa")) {
+        setShowOtp(true);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -325,6 +330,28 @@ const Auth = () => {
               />
             </div>
                   </div>
+
+                  {showOtp && (
+                    <div className="space-y-2">
+                      <Label htmlFor="otp" className="text-slate-700 dark:text-slate-300">
+                        One-Time Code (MFA)
+                      </Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          id="otp"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="\d*"
+                          placeholder="Enter 6-digit code"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          disabled={isLoading}
+                          className="pl-10 h-11 !rounded-xl"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <Button 
                     type="submit" 

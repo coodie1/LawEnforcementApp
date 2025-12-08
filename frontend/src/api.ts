@@ -34,8 +34,8 @@ API.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-    login: async (email: string, password: string): Promise<AuthResponse> => {
-        const { data } = await API.post('/auth/login', { email, password });
+    login: async (email: string, password: string, otp?: string): Promise<AuthResponse> => {
+        const { data } = await API.post('/auth/login', { email, password, otp });
         return data;
     },
     register: async (userData: {
@@ -57,6 +57,18 @@ export const authAPI = {
         bloodGroup?: string;
     }): Promise<{ user: User }> => {
         const { data } = await API.put('/auth/profile', userData);
+        return data;
+    },
+    mfaSetup: async (): Promise<{ otpauthUrl: string; base32: string }> => {
+        const { data } = await API.post('/auth/mfa/setup');
+        return data;
+    },
+    mfaVerify: async (otp: string): Promise<{ message: string }> => {
+        const { data } = await API.post('/auth/mfa/verify', { otp });
+        return data;
+    },
+    mfaDisable: async (): Promise<{ message: string }> => {
+        const { data } = await API.post('/auth/mfa/disable');
         return data;
     },
 };

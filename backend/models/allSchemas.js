@@ -133,6 +133,8 @@ const userSchema = new Schema({
     temporaryPassword: { type: Boolean, default: false },
     dateOfBirth: { type: Date },
     bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] },
+    mfaEnabled: { type: Boolean, default: false },
+    mfaSecret: { type: String },
 }, { strict: false, timestamps: true });
 
 const activityLogSchema = new Schema({

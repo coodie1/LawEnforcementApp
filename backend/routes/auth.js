@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const speakeasy = require('speakeasy');
 const models = require('../models/allSchemas');
 const User = models.users;
 const { logCustomActivity } = require('../middleware/activityLogger');
@@ -68,7 +69,8 @@ router.post('/register', async (req, res) => {
                 username: newUser.username,
                 firstName: newUser.firstName,
                 lastName: newUser.lastName,
-                role: newUser.role
+                role: newUser.role,
+                mfaEnabled: newUser.mfaEnabled,
             }
         });
         await logCustomActivity({
@@ -137,6 +139,36 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
+        // If MFA is enabled, require otp token
+        if (user.mfaEnabled) {
+            const { otp } = req.body;
+            if (!otp) {
+                return res.status(400).json({ message: 'OTP required' });
+            }
+            const verified = speakeasy.totp.verify({
+                secret: user.mfaSecret,
+                encoding: 'base32',
+                token: otp,
+                window: 1, // allow small clock drift
+            });
+            if (!verified) {
+                await logCustomActivity({
+                    req,
+                    action: 'login_failure',
+                    entityType: 'auth',
+                    entityId: user._id?.toString() || 'unknown',
+                    entityName: email || username || user.email,
+                    userOverride: {
+                        userId: user._id?.toString() || 'unknown',
+                        userEmail: user.email || email || username || 'unknown',
+                        userName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'unknown',
+                    },
+                    changes: { reason: 'invalid_otp' },
+                });
+                return res.status(400).json({ message: 'Invalid OTP' });
+            }
+        }
+
         // Create token
         const token = jwt.sign(
             { id: user._id, email: user.email, role: user.role },
@@ -155,7 +187,8 @@ router.post('/login', async (req, res) => {
                 role: user.role,
                 temporaryPassword: user.temporaryPassword,
                 dateOfBirth: user.dateOfBirth,
-                bloodGroup: user.bloodGroup
+                bloodGroup: user.bloodGroup,
+                mfaEnabled: user.mfaEnabled,
             }
         });
         await logCustomActivity({
@@ -222,7 +255,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
                 role: user.role,
                 temporaryPassword: user.temporaryPassword,
                 dateOfBirth: user.dateOfBirth,
-                bloodGroup: user.bloodGroup
+                bloodGroup: user.bloodGroup,
+                mfaEnabled: user.mfaEnabled,
             }
         });
         await logCustomActivity({
@@ -236,6 +270,121 @@ router.put('/profile', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error during profile update' });
+    }
+});
+
+// MFA setup - generate secret (user must verify before enabling)
+router.post('/mfa/setup', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const secret = speakeasy.generateSecret({
+            name: `Law Enforcement System (${user.email || user.username})`,
+            length: 20,
+        });
+
+        // Store secret temporarily; enable after verify
+        user.mfaSecret = secret.base32;
+        await user.save();
+
+        await logCustomActivity({
+            req,
+            action: 'update',
+            entityType: 'auth/mfa',
+            entityId: user._id?.toString() || 'unknown',
+            entityName: user.email || user.username,
+            changes: { step: 'setup' },
+        });
+
+        res.json({
+            otpauthUrl: secret.otpauth_url,
+            base32: secret.base32,
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error during MFA setup' });
+    }
+});
+
+// MFA verify - confirm token and enable
+router.post('/mfa/verify', authenticateToken, async (req, res) => {
+    try {
+        const { otp } = req.body;
+        if (!otp) {
+            return res.status(400).json({ message: 'OTP required' });
+        }
+
+        const user = await User.findById(req.userId);
+        if (!user || !user.mfaSecret) {
+            return res.status(400).json({ message: 'MFA not initialized' });
+        }
+
+        const verified = speakeasy.totp.verify({
+            secret: user.mfaSecret,
+            encoding: 'base32',
+            token: otp,
+            window: 1,
+        });
+
+        if (!verified) {
+            await logCustomActivity({
+                req,
+                action: 'login_failure',
+                entityType: 'auth/mfa',
+                entityId: user._id?.toString() || 'unknown',
+                entityName: user.email || user.username,
+                changes: { reason: 'invalid_otp_verify' },
+            });
+            return res.status(400).json({ message: 'Invalid OTP' });
+        }
+
+        user.mfaEnabled = true;
+        await user.save();
+
+        await logCustomActivity({
+            req,
+            action: 'update',
+            entityType: 'auth/mfa',
+            entityId: user._id?.toString() || 'unknown',
+            entityName: user.email || user.username,
+            changes: { step: 'enabled' },
+        });
+
+        res.json({ message: 'MFA enabled' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error during MFA verification' });
+    }
+});
+
+// MFA disable
+router.post('/mfa/disable', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.mfaEnabled = false;
+        user.mfaSecret = undefined;
+        await user.save();
+
+        await logCustomActivity({
+            req,
+            action: 'update',
+            entityType: 'auth/mfa',
+            entityId: user._id?.toString() || 'unknown',
+            entityName: user.email || user.username,
+            changes: { step: 'disabled' },
+        });
+
+        res.json({ message: 'MFA disabled' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error during MFA disable' });
     }
 });
 

@@ -32,6 +32,34 @@ API.interceptors.response.use(
   }
 );
 
+// Auth API
+export const authAPI = {
+  login: async (email, password, otp) => {
+    const { data } = await API.post('/auth/login', { email, password, otp });
+    return data;
+  },
+  register: async (userData) => {
+    const { data } = await API.post('/auth/register', userData);
+    return data;
+  },
+  updateProfile: async (userData) => {
+    const { data } = await API.put('/auth/profile', userData);
+    return data;
+  },
+  mfaSetup: async () => {
+    const { data } = await API.post('/auth/mfa/setup');
+    return data;
+  },
+  mfaVerify: async (otp) => {
+    const { data } = await API.post('/auth/mfa/verify', { otp });
+    return data;
+  },
+  mfaDisable: async () => {
+    const { data } = await API.post('/auth/mfa/disable');
+    return data;
+  },
+};
+
 // Users API (Admin only)
 export const usersAPI = {
     getAll: async () => {

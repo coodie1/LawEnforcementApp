@@ -33,6 +33,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [dobOpen, setDobOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaUrl, setMfaUrl] = useState<string | null>(null);
+  const [mfaOtp, setMfaOtp] = useState("");
+  const [mfaLoading, setMfaLoading] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -67,6 +71,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       });
       setHasChanges(false);
       setError(null);
+      setMfaSecret(null);
+      setMfaUrl(null);
+      setMfaOtp("");
+      setMfaLoading(false);
     }
   }, [user, open]);
 
@@ -198,6 +206,61 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       setError(error.response?.data?.message || "Failed to update profile");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const startMfaSetup = async () => {
+    try {
+      setMfaLoading(true);
+      const data = await authAPI.mfaSetup();
+      setMfaSecret(data.base32);
+      setMfaUrl(data.otpauthUrl);
+      toast.success("MFA secret generated. Scan the QR or enter the code, then verify.");
+    } catch (err: any) {
+      console.error("MFA setup error:", err);
+      toast.error(err?.response?.data?.message || "Failed to start MFA setup");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const verifyMfa = async () => {
+    if (!mfaOtp) {
+      toast.error("Enter the 6-digit code from your authenticator app.");
+      return;
+    }
+    try {
+      setMfaLoading(true);
+      await authAPI.mfaVerify(mfaOtp);
+      const updatedUser = { ...user, mfaEnabled: true };
+      updateUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      toast.success("MFA enabled. Use OTP at login.");
+      setMfaOtp("");
+    } catch (err: any) {
+      console.error("MFA verify error:", err);
+      toast.error(err?.response?.data?.message || "Failed to verify MFA");
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  const disableMfa = async () => {
+    try {
+      setMfaLoading(true);
+      await authAPI.mfaDisable();
+      const updatedUser = { ...user, mfaEnabled: false, mfaSecret: undefined as any };
+      updateUser(updatedUser);
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setMfaSecret(null);
+      setMfaUrl(null);
+      setMfaOtp("");
+      toast.success("MFA disabled.");
+    } catch (err: any) {
+      console.error("MFA disable error:", err);
+      toast.error(err?.response?.data?.message || "Failed to disable MFA");
+    } finally {
+      setMfaLoading(false);
     }
   };
 
@@ -388,6 +451,76 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 </div>
               </div>
             )}
+
+            <div className="space-y-3 rounded-md border border-muted p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Multi-Factor Authentication (TOTP)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Protect your account with an authenticator app (Google Authenticator, Authy, etc.).
+                  </p>
+                </div>
+                <span className={`text-xs font-semibold ${user.mfaEnabled ? "text-green-600" : "text-orange-600"}`}>
+                  {user.mfaEnabled ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+
+              {!user.mfaEnabled && (
+                <div className="space-y-3">
+                  <Button type="button" variant="outline" disabled={mfaLoading} onClick={startMfaSetup}>
+                    {mfaLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {mfaSecret ? "Regenerate Secret" : "Enable MFA"}
+                  </Button>
+
+                  {mfaSecret && (
+                    <div className="space-y-3 rounded-md bg-muted/50 p-3">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Step 1: Add this account to your authenticator</p>
+                        <p className="text-xs text-muted-foreground break-all">Secret: {mfaSecret}</p>
+                        {mfaUrl && (
+                          <div className="flex flex-col items-start gap-2">
+                            <p className="text-xs text-muted-foreground">Scan the QR below:</p>
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(mfaUrl)}&size=180x180`}
+                              alt="MFA QR"
+                              className="rounded border bg-white"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="mfaOtp">Step 2: Enter the 6-digit code from your app</Label>
+                        <Input
+                          id="mfaOtp"
+                          value={mfaOtp}
+                          onChange={(e) => setMfaOtp(e.target.value)}
+                          placeholder="123456"
+                          maxLength={6}
+                          inputMode="numeric"
+                        />
+                        <Button type="button" onClick={verifyMfa} disabled={mfaLoading}>
+                          {mfaLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Verify & Enable
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {user.mfaEnabled && (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    MFA is active. Use your authenticator code when logging in.
+                  </p>
+                  <Button type="button" variant="outline" onClick={disableMfa} disabled={mfaLoading}>
+                    {mfaLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Disable MFA
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           <DialogFooter>

@@ -9,6 +9,7 @@ export interface User {
     temporaryPassword?: boolean;
     dateOfBirth?: Date | string;
     bloodGroup?: string;
+    mfaEnabled?: boolean;
 }
 
 export interface AuthResponse {
