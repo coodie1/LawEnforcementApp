@@ -106,6 +106,7 @@ router.post('/login', async (req, res) => {
         }
 
         if (!user) {
+            console.log(`[LOGIN FAILED] User not found: ${email || username}`);
             await logCustomActivity({
                 req,
                 action: 'login_failure',
@@ -121,9 +122,16 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
+        // Check if user has a password
+        if (!user.password) {
+            console.log(`[LOGIN FAILED] User ${user.email || user.username} has no password hash`);
+            return res.status(400).json({ message: 'User account is not properly configured. Please contact administrator.' });
+        }
+
         // Check password
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
+            console.log(`[LOGIN FAILED] Password mismatch for user: ${user.email || user.username}`);
             await logCustomActivity({
                 req,
                 action: 'login_failure',
@@ -191,16 +199,27 @@ router.post('/login', async (req, res) => {
                 mfaEnabled: user.mfaEnabled,
             }
         });
-        await logCustomActivity({
-            req,
-            action: 'login_success',
-            entityType: 'auth',
-            entityId: user._id?.toString() || 'unknown',
-            entityName: user.email,
-        });
+        // Log login success (don't let logging errors break login)
+        try {
+            await logCustomActivity({
+                req,
+                action: 'login_success',
+                entityType: 'auth',
+                entityId: user._id?.toString() || 'unknown',
+                entityName: user.email,
+            });
+        } catch (logError) {
+            console.error('Failed to log login success:', logError);
+            // Don't fail login if logging fails
+        }
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error during login' });
+        console.error('❌ Login error:', err);
+        console.error('Error stack:', err.stack);
+        const errorMessage = err.message || 'Server error during login';
+        res.status(500).json({ 
+            message: errorMessage,
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 });
 

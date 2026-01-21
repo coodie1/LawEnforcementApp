@@ -2,8 +2,23 @@ import axios from 'axios';
 import type { AuthResponse, StatsData, Case, Arrest, Officer, Department, User, ActivityLog } from './types';
 
 // Create axios instance with base URL
+// Ensure the URL ends with /api and has no trailing slash
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Normalize the URL: remove trailing slash, ensure /api is present
+API_URL = API_URL.trim().replace(/\/+$/, ''); // Remove trailing slashes
+if (!API_URL.endsWith('/api')) {
+    // If it doesn't end with /api, add it
+    API_URL = API_URL + (API_URL.endsWith('/') ? 'api' : '/api');
+}
+
+// Log API URL in development to help with debugging
+if (import.meta.env.DEV) {
+    console.log('🔗 API Base URL:', API_URL);
+}
+
 const API = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    baseURL: API_URL,
 });
 
 // Add auth token to requests
@@ -35,8 +50,15 @@ API.interceptors.response.use(
 // Auth API
 export const authAPI = {
     login: async (email: string, password: string, otp?: string): Promise<AuthResponse> => {
-        const { data } = await API.post('/auth/login', { email, password, otp });
-        return data;
+        try {
+            console.log('📡 Sending login request to:', API_URL + '/auth/login');
+            const { data } = await API.post('/auth/login', { email, password, otp });
+            console.log('✅ Login response received:', { hasToken: !!data.token, hasUser: !!data.user });
+            return data;
+        } catch (error: any) {
+            console.error('❌ Login API error:', error);
+            throw error;
+        }
     },
     register: async (userData: {
         username: string;

@@ -80,11 +80,33 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Attempting login with:', { email, passwordLength: password.length });
       await login(email, password, showOtp ? otp || undefined : undefined);
-        toast.success("Login successful!");
+      console.log('✅ Login successful!');
+      toast.success("Login successful!");
       navigate("/");
     } catch (error: any) {
-      const message = error.response?.data?.message || "Login failed. Please check your credentials.";
+      console.error('❌ Login error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      
+      let message = "Login failed. Please check your credentials.";
+      
+      if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
+          message = "Cannot connect to server. Make sure the backend is running on port 5000.";
+        } else {
+          message = error.message;
+        }
+      }
+      
       toast.error(message);
       if (message.toLowerCase().includes("otp") || message.toLowerCase().includes("mfa")) {
         setShowOtp(true);

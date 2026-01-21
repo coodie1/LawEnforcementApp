@@ -2,8 +2,23 @@ import axios from 'axios';
 
 // Create a base axios instance that we can use everywhere in our app.
 // This tells axios: "Whenever I make a request, start with this base URL."
+// Ensure the URL ends with /api and has no trailing slash
+let API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+// Normalize the URL: remove trailing slash, ensure /api is present
+API_URL = API_URL.trim().replace(/\/+$/, ''); // Remove trailing slashes
+if (!API_URL.endsWith('/api')) {
+    // If it doesn't end with /api, add it
+    API_URL = API_URL + (API_URL.endsWith('/') ? 'api' : '/api');
+}
+
+// Log API URL in development to help with debugging
+if (import.meta.env.DEV) {
+    console.log('🔗 API Base URL:', API_URL);
+}
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
 });
 
 // Add auth token to requests (same as api.ts)

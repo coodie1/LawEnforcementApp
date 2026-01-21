@@ -18,21 +18,52 @@ app.use(express.json());
 
 // Database Connection
 const uri = process.env.MONGODB_URI;
+if (!uri) {
+    console.error("❌ ERROR: MONGODB_URI is not set in environment variables!");
+    console.error("   Please create a .env file in the backend directory with:");
+    console.error("   MONGODB_URI=your_mongodb_connection_string");
+    process.exit(1);
+}
+
 mongoose.connect(uri, {
     // MongoDB Atlas connection options
     retryWrites: true,
     w: 'majority'
 })
     // IF YOU SEE THIS MESSAGE IN TERMINAL, MONGODB IS WORKING FINE:
-    .then(() => console.log(">>> MongoDB Atlas database connection established successfully! <<<"))
-    .catch(err => console.error("MongoDB connection error:", err));
+    .then(() => {
+        console.log(">>> MongoDB Atlas database connection established successfully! <<<");
+        console.log(`   Database: ${mongoose.connection.name}`);
+        console.log(`   Host: ${mongoose.connection.host}`);
+    })
+    .catch(err => {
+        console.error("❌ MongoDB connection error:", err.message);
+        console.error("   Please check your MONGODB_URI in .env file");
+        process.exit(1);
+    });
 
 
 // ==================================================
-//  --- NEW: ADD THIS BASIC HOMEPAGE ROUTE BACK ---
+//  --- Health Check & Status Routes ---
 // ==================================================
 app.get('/', (req, res) => {
-    res.send('CrimeDB Unified Backend is running! Go to frontend to use the app.');
+    res.json({
+        status: 'running',
+        message: 'CrimeDB Unified Backend is running!',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+// Health check endpoint for deployment monitoring
+app.get('/health', (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+        status: 'ok',
+        database: dbStatus,
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
 });
 // ==================================================
 
